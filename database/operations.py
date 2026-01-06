@@ -330,3 +330,74 @@ class DatabaseOperations:
         except Exception as e:
             st.error(f"Error saving preferences: {str(e)}")
             return False
+
+    def get_or_create_user(self, user_id: str, email: str, first_name: str, second_name: str, password: Optional[str] = None) -> Optional[Dict]:
+        """
+        Ensure user exists in the custom user table.
+        """
+        if not self.client:
+            return None
+        
+        try:
+            # Check if user exists
+            response = self.client.table("user").select("*").eq("id", user_id).execute()
+            if response.data:
+                return response.data[0]
+            
+            # Create user if doesn't exist
+            user_data = {
+                "id": user_id,
+                "email": email,
+                "first_name": first_name,
+                "second_name": second_name
+            }
+            if password:
+                user_data["password"] = password
+                
+            response = self.client.table("user").insert(user_data).execute()
+            if response.data:
+                return response.data[0]
+            return None
+        except Exception as e:
+            print(f"Custom user table access error: {str(e)}")
+            return {"id": user_id, "email": email, "first_name": first_name, "second_name": second_name}
+
+    def create_user(self, email: str, password: str, first_name: str, second_name: str) -> tuple[Optional[Dict], Optional[str]]:
+        """
+        Create a new user account.
+        
+        Returns:
+            Tuple of (user_record, error_message)
+        """
+        if not self.client:
+            return None, "Geen verbinding met de database"
+        
+        try:
+            user_data = {
+                "email": email,
+                "password": password,
+                "first_name": first_name,
+                "second_name": second_name
+            }
+            response = self.client.table("user").insert(user_data).execute()
+            if response.data:
+                return response.data[0], None
+            return None, "Kon gebruiker niet aanmaken"
+        except Exception as e:
+            error_msg = str(e)
+            if "duplicate" in error_msg.lower():
+                return None, "Dit e-mailadres is al in gebruik"
+            return None, f"Fout bij aanmaken gebruiker: {error_msg}"
+
+    def get_user_by_email(self, email: str) -> Optional[Dict]:
+        """Retrieve a user by their email address."""
+        if not self.client:
+            return None
+        try:
+            response = self.client.table("user").select("*").eq("email", email).execute()
+            if response.data:
+                return response.data[0]
+            return None
+        except Exception as e:
+            print(f"Error fetching user by email: {str(e)}")
+            return None

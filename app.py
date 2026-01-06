@@ -86,7 +86,7 @@ def show_settings_page():
     
     st.title("⚙️ Instellingen")
     
-    from ui.auth import get_current_user
+    from views.auth import get_current_user
     from database.operations import DatabaseOperations
     
     user = get_current_user()
