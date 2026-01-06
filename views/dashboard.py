@@ -3,6 +3,7 @@ Main dashboard interface with all visualizations and analytics.
 """
 
 import streamlit as st
+import pandas as pd
 from datetime import datetime, timedelta, date
 from database.operations import DatabaseOperations
 from services.analytics import Analytics
@@ -203,7 +204,6 @@ def show_trends_tab(analytics: Analytics, cat_engine: CategorizationEngine):
     st.subheader("Categorie Totalen")
     category_totals = analytics.get_category_totals()
     if category_totals:
-        import pandas as pd
         df = pd.DataFrame([
             {
                 'Categorie': cat,

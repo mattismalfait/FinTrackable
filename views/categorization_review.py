@@ -53,7 +53,14 @@ def show_pending_review(user_id: str, db_ops: DatabaseOperations):
     user_categories = db_ops.get_categories(user_id)
     cat_name_to_id = {c['name']: c['id'] for c in user_categories}
     cat_engine = CategorizationEngine(user_categories)
-    all_categories = cat_engine.get_category_names()
+    
+    # STRICTLY use DB categories + New option
+    db_category_names = sorted([c['name'] for c in user_categories])
+    # Ensure "Overig" is in the list if not present (though it should be)
+    if "Overig" not in db_category_names:
+        db_category_names.append("Overig")
+        
+    all_categories = db_category_names + ["➕ Nieuwe categorie..."]
     
     st.write(f"**{len(transactions)}** transacties wachten op bevestiging")
     
@@ -154,17 +161,20 @@ def show_pending_review(user_id: str, db_ops: DatabaseOperations):
                 # Category selector
                 current_category = trans.get('categorie', 'Overig')
                 cat_index = 0
-                try:
-                    if current_category in all_categories:
-                        cat_index = all_categories.index(current_category)
-                    else:
-                        all_categories_lower = [c.lower() for c in all_categories]
-                        if current_category.lower() in all_categories_lower:
-                            cat_index = all_categories_lower.index(current_category.lower())
-                        else:
-                            cat_index = all_categories.index("Overig") if "Overig" in all_categories else 0
-                except:
-                    cat_index = 0
+                
+                # If current category isn't in our DB list (ghost category), default to Overig or logic
+                if current_category in db_category_names:
+                    cat_index = db_category_names.index(current_category)
+                else:
+                    # Try fuzzy lowercase match
+                    found = False
+                    for i, name in enumerate(db_category_names):
+                        if name.lower() == current_category.lower():
+                            cat_index = i
+                            found = True
+                            break
+                    if not found and "Overig" in db_category_names:
+                        cat_index = db_category_names.index("Overig")
 
                 new_category = st.selectbox(
                     "Categorie",
@@ -173,34 +183,76 @@ def show_pending_review(user_id: str, db_ops: DatabaseOperations):
                     key=f"cat_{trans_id}",
                     label_visibility="collapsed"
                 )
+                
+                custom_cat_name = None
+                if new_category == "➕ Nieuwe categorie...":
+                    custom_cat_name = st.text_input("Nieuwe naam", key=f"new_cat_inp_{trans_id}", placeholder="Typ naam...", label_visibility="collapsed")
             
             with col4:
                 # Combined Save & Confirm button
                 if st.button("✅", key=f"conf_{trans_id}", type="primary", use_container_width=True):
+                    
+                    final_category_id = None
+                    final_category_name = new_category
+                    
+                    # Handle new category creation
+                    if new_category == "➕ Nieuwe categorie...":
+                        if custom_cat_name and custom_cat_name.strip():
+                            # Create the new category
+                            from models.category import Category
+                            # Determine color (cycle or random)
+                            import random
+                            colors = ["#ef4444", "#f97316", "#f59e0b", "#84cc16", "#10b981", "#06b6d4", "#3b82f6", "#8b5cf6", "#ec4899"]
+                            new_cat_obj = Category(name=custom_cat_name.strip(), color=random.choice(colors))
+                            
+                            created_id = db_ops.create_category(new_cat_obj, user_id)
+                            if created_id:
+                                final_category_id = created_id
+                                final_category_name = custom_cat_name.strip()
+                                st.toast(f"Categorie '{final_category_name}' aangemaakt!")
+                            else:
+                                st.error("Kon categorie niet aanmaken")
+                                st.stop()
+                        else:
+                            st.warning("Vul een naam in voor de nieuwe categorie")
+                            st.stop()
+                    else:
+                        final_category_id = cat_name_to_id.get(new_category)
+                        final_category_name = new_category
+
                     updates = {
                         "is_confirmed": True,
-                        "categorie_id": cat_name_to_id.get(new_category),
+                        "categorie_id": final_category_id,
                         "naam_tegenpartij": new_name,
                         "omschrijving": new_desc
                     }
                     
                     if db_ops.update_transaction(trans_id, updates, user_id):
-                        if new_category != current_category:
-                            trans_obj = Transaction(
+                        # Learning logic
+                        # If the final category is different from what was AUTO suggested (in 'categorie' field of trans)
+                        # calculate rule.
+                        current_auto_cat = trans.get('categorie')
+                        if final_category_name != current_auto_cat:
+                             trans_obj = Transaction(
                                 datum=datetime.strptime(trans['datum'], '%Y-%m-%d').date() if isinstance(trans['datum'], str) else trans['datum'],
                                 bedrag=Decimal(str(trans['bedrag'])),
                                 naam_tegenpartij=new_name,
                                 omschrijving=new_desc
                             )
-                            learned_rule = cat_engine.learn_from_correction(trans_obj, new_category)
-                            if learned_rule and learned_rule.get('rule'):
-                                existing_cat = db_ops.get_category_by_name(new_category, user_id)
+                             # Note: learn_from_correction returns a rule dict
+                             # It doesn't modify the new category, just suggests a rule for it
+                             learned_rule = cat_engine.learn_from_correction(trans_obj, final_category_name)
+                             
+                             if learned_rule and learned_rule.get('rule'):
+                                # Add this rule to the category (new or existing)
+                                existing_cat = db_ops.get_category_by_name(final_category_name, user_id)
                                 if existing_cat:
                                     current_rules = existing_cat.get('rules', [])
+                                    # unique check
                                     if not any(r == learned_rule['rule'] for r in current_rules):
                                         current_rules.append(learned_rule['rule'])
                                         db_ops.update_category_rules(existing_cat['id'], current_rules, user_id)
-                                        st.toast(f"💡 Regel geleerd!")
+                                        st.toast(f"💡 Regel geleerd voor '{final_category_name}'")
                         
                         # Cleanup session state
                         if name_key in st.session_state: del st.session_state[name_key]
@@ -280,24 +332,65 @@ def show_rules_management(user_id: str, db_ops: DatabaseOperations):
             st.markdown(f"**Kleur:** {category.get('color', '#9ca3af')}")
             
             rules = category.get('rules', [])
-            if rules:
-                st.markdown("**Regels:**")
-                for rule in rules:
-                    field = rule.get('field', '')
-                    contains = rule.get('contains', [])
-                    condition = rule.get('condition', '')
-                    
-                    if contains:
-                        st.write(f"- Als **{field}** bevat: {', '.join(contains)}")
-                    if condition:
-                        st.write(f"- Als bedrag is: **{condition}**")
-            else:
-                st.write("Geen regels gedefinieerd")
+            # Extract existing keywords from rules
+            current_keywords = set()
+            other_rules = []
             
-            # Delete category button
-            if st.button(f"🗑️ Verwijder {category['name']}", key=f"del_{category['id']}"):
-                # Note: Would need to implement delete_category in DatabaseOperations
-                st.warning("Verwijderen van categorieën is momenteel niet beschikbaar")
+            for rule in rules:
+                field = rule.get('field', '')
+                contains = rule.get('contains', [])
+                
+                # Collect keywords from text-based rules
+                if field in ['naam_tegenpartij', 'omschrijving'] and contains:
+                    current_keywords.update(contains)
+                else:
+                    # Keep non-text rules (like amount conditions) preserved
+                    other_rules.append(rule)
+            
+            # Form for editing
+            with st.form(f"rules_form_{category['id']}"):
+                st.write("**Trefwoorden** (komma-gescheiden)")
+                st.caption("Transacties met deze woorden in naam of omschrijving worden automatisch aan deze categorie gekoppeld.")
+                
+                keywords_str = st.text_area(
+                    "Trefwoorden",
+                    value=", ".join(sorted(current_keywords)),
+                    key=f"keywords_{category['id']}",
+                    label_visibility="collapsed"
+                )
+                
+                col_save, col_del = st.columns([1, 5])
+                with col_save:
+                    if st.form_submit_button("💾 Opslaan"):
+                        # Process new keywords
+                        new_keywords = [k.strip() for k in keywords_str.split(',') if k.strip()]
+                        
+                        # Reconstruct rules
+                        new_rules = other_rules.copy()
+                        
+                        if new_keywords:
+                            # Create rules for both fields to ensure broad matching
+                            new_rules.append({
+                                "field": "naam_tegenpartij",
+                                "contains": new_keywords
+                            })
+                            new_rules.append({
+                                "field": "omschrijving",
+                                "contains": new_keywords
+                            })
+                        
+                        if db_ops.update_category_rules(category['id'], new_rules, user_id):
+                            st.success("Regels bijgewerkt!")
+                            st.rerun()
+                        else:
+                            st.error("Kon regels niet opslaan")
+                
+                with col_del:
+                    pass # Spacer
+            
+            # Delete category button (outside form)
+            if st.button(f"🗑️ Verwijder Categorie", key=f"del_{category['id']}"):
+                 st.warning("Verwijderen van categorieën is momenteel niet beschikbaar")
     
     st.divider()
     

@@ -19,6 +19,30 @@ class DatabaseOperations:
     # TRANSACTION OPERATIONS
     # ========================================================================
     
+    def get_existing_hashes(self, user_id: str) -> set:
+        """
+        Get set of all existing transaction hashes for a user.
+        
+        Args:
+            user_id: User ID
+            
+        Returns:
+            Set of hash strings
+        """
+        if not self.client:
+            return set()
+            
+        try:
+            # Fetch all hashes for this user
+            # We use a large limit to get everything (Supabase default is 1000)
+            # You might need pagination for huge datasets, but for personal finance this works for now
+            response = self.client.table("transactions").select("hash").eq("user_id", user_id).limit(10000).execute()
+            
+            return {item['hash'] for item in response.data if item.get('hash')}
+        except Exception as e:
+            st.error(f"Error checking duplicates: {str(e)}")
+            return set()
+
     def insert_transactions(self, transactions: List[Transaction], user_id: str) -> Dict:
         """
         Insert multiple transactions into the database.
@@ -33,6 +57,9 @@ class DatabaseOperations:
         """
         if not self.client:
             return {"success": 0, "skipped": 0, "errors": ["No database connection"]}
+        
+        # If we didn't filter before calling this function, we do it here one by one (slow)
+        # But ideally, we should use get_existing_hashes before
         
         success_count = 0
         skipped_count = 0

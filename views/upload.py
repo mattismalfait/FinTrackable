@@ -99,11 +99,35 @@ def show_file_upload():
                     for error in errors:
                         st.warning(error)
             
-            if not transactions:
-                st.error("Geen geldige transacties gevonden")
-                return
-            
-            st.success(f"✅ {len(transactions)} transacties succesvol ingelezen")
+            # Filter out duplicates immediately
+            if transactions:
+                db_ops = DatabaseOperations()
+                existing_hashes = db_ops.get_existing_hashes(user.id)
+                
+                # Generate hashes for new transactions (if not already done)
+                unique_transactions = []
+                duplicate_count = 0
+                
+                for t in transactions:
+                    if not t.hash:
+                        t.generate_hash()
+                    
+                    if t.hash in existing_hashes:
+                        duplicate_count += 1
+                    else:
+                        unique_transactions.append(t)
+                        # Add to set to prevent duplicates within the same upload file
+                        existing_hashes.add(t.hash)
+                
+                if duplicate_count > 0:
+                    st.info(f"ℹ️ **{duplicate_count}** dubbele transacties zijn eruit gefilterd (al in systeem).")
+                
+                if not unique_transactions:
+                    st.warning("⚠️ Alle geüploade transacties zitten al in het systeem.")
+                    st.stop()
+                    
+                transactions = unique_transactions
+                st.success(f"✅ {len(transactions)} nieuwe transacties klaar om te importeren")
             
             # Show preview
             with st.expander("📋 Voorbeeld transacties", expanded=True):
@@ -121,7 +145,7 @@ def show_file_upload():
             
             # Analyze and suggest categories
             if st.button("➡️ Doorgaan naar Categorie Suggesties", type="primary"):
-                db_ops = DatabaseOperations()
+                # db_ops initialized above
                 user_categories = db_ops.get_categories(user.id)
                 
                 suggester = CategorySuggester(user_categories=user_categories)
