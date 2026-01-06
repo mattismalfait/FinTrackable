@@ -18,6 +18,7 @@ class Transaction(BaseModel):
     naam_tegenpartij: Optional[str] = None
     omschrijving: Optional[str] = None
     categorie: Optional[str] = "Overig"
+    categorie_id: Optional[str] = None
     is_confirmed: bool = False
     hash: Optional[str] = None
     
@@ -43,7 +44,7 @@ class Transaction(BaseModel):
             "bedrag": float(self.bedrag),
             "naam_tegenpartij": self.naam_tegenpartij,
             "omschrijving": self.omschrijving,
-            "categorie": self.categorie,
+            "categorie_id": self.categorie_id,
             "is_confirmed": self.is_confirmed,
             "hash": self.hash or self.generate_hash()
         }

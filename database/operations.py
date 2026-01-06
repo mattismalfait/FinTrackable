@@ -87,14 +87,24 @@ class DatabaseOperations:
             return []
         
         try:
-            query = self.client.table("transactions").select("*").eq("user_id", user_id)
+            # Join with categories to get name and color
+            query = self.client.table("transactions").select("*, categories(name, color)").eq("user_id", user_id)
             
             if start_date:
                 query = query.gte("datum", start_date.isoformat())
             if end_date:
                 query = query.lte("datum", end_date.isoformat())
             if category:
-                query = query.eq("categorie", category)
+                # If category is provided as a name, we might need a separate query or handle it by ID
+                # For now, we'll assume filter by ID if it's a UUID, otherwise by name via join
+                if len(category) > 30 and "-" in category: # Simple UUID check
+                    query = query.eq("categorie_id", category)
+                else:
+                    # Filter by category name in the joined table
+                    # Note: Supabase filtering on joined tables can be tricky, 
+                    # but usually it's 'categories.name'
+                    query = query.eq("categories.name", category)
+                    
             if is_confirmed is not None:
                 query = query.eq("is_confirmed", is_confirmed)
             
@@ -102,7 +112,20 @@ class DatabaseOperations:
             query = query.order("datum", desc=True)
             
             response = query.execute()
-            return response.data
+            
+            # Flatten the response for easier use
+            processed_data = []
+            for item in response.data:
+                category_info = item.get('categories', {})
+                if category_info:
+                    item['categorie'] = category_info.get('name', 'Overig')
+                    item['color'] = category_info.get('color', '#9ca3af')
+                else:
+                    item['categorie'] = 'Overig'
+                    item['color'] = '#9ca3af'
+                processed_data.append(item)
+                
+            return processed_data
         except Exception as e:
             st.error(f"Error fetching transactions: {str(e)}")
             return []
@@ -142,13 +165,13 @@ class DatabaseOperations:
             st.error(f"Error updating transaction: {str(e)}")
             return False
 
-    def update_transaction_category(self, transaction_id: str, category: str, user_id: str) -> bool:
+    def update_transaction_category(self, transaction_id: str, category_id: str, user_id: str) -> bool:
         """
-        Update the category of a transaction.
+        Update the category ID of a transaction.
         
         Args:
             transaction_id: Transaction ID
-            category: New category name
+            category_id: New category ID
             user_id: User ID for verification
             
         Returns:
@@ -159,11 +182,11 @@ class DatabaseOperations:
         
         try:
             self.client.table("transactions").update(
-                {"categorie": category}
+                {"categorie_id": category_id}
             ).eq("id", transaction_id).eq("user_id", user_id).execute()
             return True
         except Exception as e:
-            st.error(f"Error updating transaction: {str(e)}")
+            st.error(f"Error updating transaction category: {str(e)}")
             return False
     
     def delete_all_transactions(self, user_id: str) -> bool:
@@ -222,31 +245,43 @@ class DatabaseOperations:
         except:
             return None
 
-    def create_category(self, category: Category, user_id: str) -> bool:
+    def create_category(self, category: Category, user_id: str) -> Optional[str]:
         """
         Create a new category.
         
-        Args:
-            category: Category object
-            user_id: User ID
-            
         Returns:
-            bool: True if successful
+            The ID of the category (newly created or existing)
         """
         if not self.client:
-            return False
+            return None
         
         try:
-            data = category.to_dict()
-            data["user_id"] = user_id
-            self.client.table("categories").insert(data).execute()
-            return True
-        except Exception as e:
             # Check if it already exists
             existing = self.get_category_by_name(category.name, user_id)
             if existing:
-                return True # Treat as success if it already exists
+                return existing['id']
+                
+            data = category.to_dict()
+            data["user_id"] = user_id
+            response = self.client.table("categories").insert(data).execute()
+            if response.data:
+                return response.data[0]['id']
+            return None
+        except Exception as e:
             st.error(f"Error creating category: {str(e)}")
+            return None
+
+    def update_category_percentage(self, category_id: str, percentage: int, user_id: str) -> bool:
+        """Update the budget percentage for a category."""
+        if not self.client:
+            return False
+        try:
+            self.client.table("categories").update(
+                {"percentage": percentage}
+            ).eq("id", category_id).eq("user_id", user_id).execute()
+            return True
+        except Exception as e:
+            st.error(f"Error updating category percentage: {str(e)}")
             return False
     
     def update_category_rules(self, category_id: str, rules: List[Dict], user_id: str) -> bool:

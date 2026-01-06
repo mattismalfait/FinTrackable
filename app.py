@@ -14,7 +14,7 @@ from utils.ui.template_loader import load_template
 
 # Page configuration
 st.set_page_config(
-    page_title="FinTrackable - Financiële Administratie",
+    page_title="FinTrackable",
     page_icon="🏦",
     layout="wide",
     initial_sidebar_state="expanded"

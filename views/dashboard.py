@@ -109,6 +109,9 @@ def show_dashboard():
         investment_pct=analytics.get_investment_percentage()
     ), unsafe_allow_html=True)
     
+    # 2. Budget Comparison Table & Editor
+    show_budget_comparison(analytics, user_categories, user.id, db_ops)
+    
     st.divider()
     
     # Main visualizations
@@ -212,6 +215,116 @@ def show_trends_tab(analytics: Analytics, cat_engine: CategorizationEngine):
         st.dataframe(df, use_container_width=True, hide_index=True)
     else:
         st.info("Geen categorieën om weer te geven")
+
+def show_budget_comparison(analytics: Analytics, categories: list[dict], user_id: str, db_ops: DatabaseOperations):
+    """Render the budget vs actual table as requested."""
+    st.subheader("🗓️ Budget Planning & Realisatie")
+    
+    # Calculate current month's income
+    total_income = analytics.get_total_income()
+    month_name = datetime.now().strftime('%b')
+    
+    # Header summary
+    st.markdown(f"""
+        <div style="background-color: #f8fafc; padding: 15px; border-radius: 10px; border-left: 5px solid #3b82f6; margin-bottom: 20px;">
+            <h4 style="margin:0; color: #64748b;">Totaal Inkomen {month_name}: <span style="color: #0f172a;">€{total_income:,.2f}</span></h4>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    if not categories:
+        st.info("Voeg eerst categorieën toe om een budget in te stellen.")
+        return
+
+    # Prepare data for table
+    budget_data = []
+    total_budget = 0
+    total_spent = 0
+    
+    cat_totals = analytics.get_category_totals()
+    
+    for cat in categories:
+        pct = cat.get('percentage', 0) or 0
+        if pct == 0 and cat['name'] == "Overig": continue
+        
+        budget_amt = total_income * (pct / 100)
+        # Sum only negative amounts (expenses) for the "Spent" column
+        spent_amt = abs(cat_totals.get(cat['name'], 0)) if cat_totals.get(cat['name'], 0) < 0 else 0
+        
+        surplus = budget_amt - spent_amt
+        
+        budget_data.append({
+            "id": cat['id'],
+            "Categorie": cat['name'],
+            "Verdeling": f"{pct}%",
+            "Budget": budget_amt,
+            "Uitgegeven": spent_amt,
+            "Overschot": surplus
+        })
+        
+        total_budget += budget_amt
+        total_spent += spent_amt
+
+    if budget_data:
+        df_budget = pd.DataFrame(budget_data)
+        
+        # Format for table display
+        display_df = df_budget.copy()
+        display_df["Budget"] = display_df["Budget"].apply(lambda x: f"€{x:,.2f}")
+        display_df["Uitgegeven"] = display_df["Uitgegeven"].apply(lambda x: f"€{x:,.2f}")
+        display_df["Overschot"] = display_df["Overschot"].apply(lambda x: f"€{x:,.2f}")
+        
+        # Color styling
+        def style_surplus(val):
+            try:
+                # Handle numeric values or formatted strings
+                if isinstance(val, str):
+                    val_num = float(val.replace('€', '').replace(',', ''))
+                else:
+                    val_num = float(val)
+                    
+                if val_num < 0:
+                    return 'background-color: #fee2e2; color: #b91c1c; font-weight: bold;'
+                return 'color: #15803d;'
+            except:
+                return ''
+
+        st.table(display_df[["Categorie", "Verdeling", "Budget", "Uitgegeven", "Overschot"]].style.applymap(style_surplus, subset=['Overschot']))
+        
+        # Totals
+        total_surplus = total_budget - total_spent
+        t_color = "#b91c1c" if total_surplus < 0 else "#15803d"
+        t_bg = "#fee2e2" if total_surplus < 0 else "#f0fdf4"
+        
+        st.markdown(f"""
+            <div style="display: flex; justify-content: space-between; padding: 10px; background-color: {t_bg}; border-radius: 5px; font-weight: bold; margin-top: -15px; border: 1px solid #e2e8f0;">
+                <span>TOTAAL</span>
+                <span style="color: {t_color};">Overschot: €{total_surplus:,.2f}</span>
+            </div>
+        """, unsafe_allow_html=True)
+        
+    # Percentage Editor
+    with st.expander("⚙️ Budget Verdeling Aanpassen"):
+        with st.form("budget_form"):
+            new_percentages = {}
+            # filter out income category for budget setting
+            budgetable_cats = [c for c in categories if c['name'] != "Inkomen"]
+            
+            cols = st.columns(min(len(budgetable_cats), 3) or 1)
+            for i, cat in enumerate(budgetable_cats):
+                with cols[i % len(cols)]:
+                    current_pct = cat.get('percentage', 0) or 0
+                    new_val = st.number_input(f"{cat['name']} (%)", min_value=0, max_value=100, value=int(current_pct), key=f"inp_{cat['id']}")
+                    new_percentages[cat['id']] = new_val
+            
+            if st.form_submit_button("✅ Verdeling Opslaan"):
+                all_success = True
+                for cat_id, pct in new_percentages.items():
+                    if not db_ops.update_category_percentage(cat_id, pct, user_id):
+                        all_success = False
+                
+                if all_success:
+                    st.success("Budget verdeling succesvol bijgewerkt!")
+                    st.rerun()
 
 def show_investments_tab(analytics: Analytics, investment_goal: float):
     """Show investments tab with goal tracking."""

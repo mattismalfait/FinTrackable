@@ -20,6 +20,7 @@ class Category(BaseModel):
     name: str
     rules: List[Dict] = []
     color: str = "#9ca3af"
+    percentage: Optional[int] = 0
     
     def matches(self, transaction) -> bool:
         """
@@ -65,5 +66,6 @@ class Category(BaseModel):
         return {
             "name": self.name,
             "rules": self.rules,
-            "color": self.color
+            "color": self.color,
+            "percentage": self.percentage
         }

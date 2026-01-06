@@ -8,12 +8,17 @@ from services.category_suggester import CategorySuggester
 from services.categorization import CategorizationEngine
 from database.operations import DatabaseOperations
 from views.auth import get_current_user
+from models.category import Category
 import pandas as pd
 
 from utils.ui.template_loader import load_template
 
 def show_upload_page():
     """Display CSV upload and import interface."""
+    
+    # Initialize session state if not present
+    if 'upload_step' not in st.session_state:
+        st.session_state['upload_step'] = 'upload'
     
     # Custom Stepper HTML using templates
     steps = ["Uploaden", "Controleren", "Importeren"]
@@ -117,7 +122,7 @@ def show_file_upload():
             # Analyze and suggest categories
             if st.button("➡️ Doorgaan naar Categorie Suggesties", type="primary"):
                 db_ops = DatabaseOperations()
-                user_categories = db_ops.get_categories(user['id'])
+                user_categories = db_ops.get_categories(user.id)
                 
                 suggester = CategorySuggester(user_categories=user_categories)
                 suggested_cats, processed_txns = suggester.analyze_and_suggest(transactions)
@@ -307,21 +312,26 @@ def show_import_confirmation():
     
     with col2:
         if st.button("🚀 Importeren!", type="primary", use_container_width=True):
-            # Handle case where user might be a dict or an object
-            user_id = user['id'] if isinstance(user, dict) else getattr(user, 'id', None)
-            if user_id:
-                perform_import(transactions, approved_cats, user_id)
-            else:
-                st.error("Gebruikers-ID niet gevonden")
+            perform_import(transactions, approved_cats, user.id)
 
 def perform_import(transactions, approved_categories, user_id):
     """Perform the actual import with approved categories."""
     
     db_ops = DatabaseOperations()
     
+    # Map for name -> id
+    cat_name_to_id = {}
+    
     with st.spinner("Categorieën worden aangemaakt..."):
-       # Create approved categories in database
+        # Ensure "Overig" exists
+        overig_cat = Category(name="Overig", color="#9ca3af", rules=[])
+        overig_id = db_ops.create_category(overig_cat, user_id)
+        cat_name_to_id["Overig"] = overig_id
+        
+        # Create approved categories in database
         for cat_name, cat_data in approved_categories.items():
+            if cat_name == "Overig": continue
+            
             # Translate keywords to rules
             rules = []
             if cat_data.get('keywords'):
@@ -344,18 +354,20 @@ def perform_import(transactions, approved_categories, user_id):
                     color=cat_data.get('color', '#9ca3af'),
                     rules=rules
                 )
-                db_ops.create_category(new_cat, user_id)
+                cat_id = db_ops.create_category(new_cat, user_id)
+                cat_name_to_id[cat_name] = cat_id
             except Exception as e:
-                # Category might already exist
                 pass
     
     with st.spinner("Transacties worden geïmporteerd..."):
-        # We already categorized them in the suggestion step!
-        # Just filter out transactions whose category was NOT approved
+        # Link transactions to category IDs
         approved_names = set(approved_categories.keys())
         for t in transactions:
-            if t.categorie not in approved_names:
-                t.categorie = "Overig"
+            # Determine correct name first (fallback to Overig)
+            final_cat_name = t.categorie if t.categorie in approved_names else "Overig"
+            
+            # Assign ID from our map
+            t.categorie_id = cat_name_to_id.get(final_cat_name, overig_id)
                 
         result = db_ops.insert_transactions(transactions, user_id)
         

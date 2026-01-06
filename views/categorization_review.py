@@ -49,8 +49,9 @@ def show_pending_review(user_id: str, db_ops: DatabaseOperations):
         st.success("✨ Alle transacties zijn bevestigd!")
         return
     
-    # Get category list
+    # Get category list and mapping
     user_categories = db_ops.get_categories(user_id)
+    cat_name_to_id = {c['name']: c['id'] for c in user_categories}
     cat_engine = CategorizationEngine(user_categories)
     all_categories = cat_engine.get_category_names()
     
@@ -178,7 +179,7 @@ def show_pending_review(user_id: str, db_ops: DatabaseOperations):
                 if st.button("✅", key=f"conf_{trans_id}", type="primary", use_container_width=True):
                     updates = {
                         "is_confirmed": True,
-                        "categorie": new_category,
+                        "categorie_id": cat_name_to_id.get(new_category),
                         "naam_tegenpartij": new_name,
                         "omschrijving": new_desc
                     }
