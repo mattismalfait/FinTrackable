@@ -1,0 +1,19 @@
+# Core Framework
+streamlit>=1.31.0
+
+# Data Processing
+pandas>=2.1.0
+
+# Database
+supabase>=2.3.0
+python-dotenv>=1.0.0
+
+# Visualizations
+plotly>=5.18.0
+altair>=5.2.0
+
+# Data Validation
+pydantic>=2.5.0
+
+# Utilities
+python-dateutil>=2.8.2
