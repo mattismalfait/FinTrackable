@@ -40,12 +40,12 @@ CREATE TABLE public.transactions (
   bedrag numeric NOT NULL,
   naam_tegenpartij text,
   omschrijving text,
-  rekeningnummer text,
   categorie_id uuid,
   hash text NOT NULL UNIQUE,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   is_confirmed boolean DEFAULT false,
+  is_lopende_rekening boolean DEFAULT false,
   CONSTRAINT transactions_pkey PRIMARY KEY (id),
   CONSTRAINT transactions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.user(id),
   CONSTRAINT transactions_categorie_id_fkey FOREIGN KEY (categorie_id) REFERENCES public.categories(id)

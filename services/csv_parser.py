@@ -10,6 +10,7 @@ from datetime import datetime
 from decimal import Decimal
 from models.transaction import Transaction
 from config.settings import CSV_COLUMNS, DATE_FORMATS
+from utils.text_cleaner import clean_transaction_description
 import streamlit as st
 
 class CSVParser:
@@ -174,6 +175,10 @@ class CSVParser:
                 # Get other fields
                 naam_tegenpartij = str(row.get(CSV_COLUMNS['naam_tegenpartij'], '')).strip() if not pd.isna(row.get(CSV_COLUMNS['naam_tegenpartij'])) else None
                 omschrijving = str(row.get(CSV_COLUMNS['omschrijving'], '')).strip() if not pd.isna(row.get(CSV_COLUMNS['omschrijving'])) else None
+                
+                # Clean description to remove redundant payment method text
+                if omschrijving:
+                    omschrijving = clean_transaction_description(omschrijving)
                 
                 # Create transaction
                 transaction = Transaction(

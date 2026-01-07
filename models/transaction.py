@@ -20,6 +20,7 @@ class Transaction(BaseModel):
     categorie: Optional[str] = "Overig"
     categorie_id: Optional[str] = None
     is_confirmed: bool = False
+    is_lopende_rekening: bool = False
     hash: Optional[str] = None
     
     class Config:
@@ -46,6 +47,7 @@ class Transaction(BaseModel):
             "omschrijving": self.omschrijving,
             "categorie_id": self.categorie_id,
             "is_confirmed": self.is_confirmed,
+            "is_lopende_rekening": self.is_lopende_rekening,
             "hash": self.hash or self.generate_hash()
         }
     

@@ -191,6 +191,27 @@ class DatabaseOperations:
         except Exception as e:
             st.error(f"Error updating transaction: {str(e)}")
             return False
+    
+    def delete_transaction(self, transaction_id: str, user_id: str) -> bool:
+        """
+        Delete a transaction from the database.
+        
+        Args:
+            transaction_id: Transaction ID to delete
+            user_id: User ID for authorization
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        if not self.client:
+            return False
+            
+        try:
+            response = self.client.table("transactions").delete().eq("id", transaction_id).eq("user_id", user_id).execute()
+            return True
+        except Exception as e:
+            st.error(f"Error deleting transaction: {str(e)}")
+            return False
 
     def update_transaction_category(self, transaction_id: str, category_id: str, user_id: str) -> bool:
         """

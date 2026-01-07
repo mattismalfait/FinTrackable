@@ -55,212 +55,227 @@ def show_pending_review(user_id: str, db_ops: DatabaseOperations):
     cat_name_to_id = {c['name']: c['id'] for c in user_categories}
     cat_engine = CategorizationEngine(user_categories)
     
-    # STRICTLY use DB categories + New option
+    # STRICTLY use DB categories
     db_category_names = sorted([c['name'] for c in user_categories])
-    # Ensure "Overig" is in the list if not present (though it should be)
     if "Overig" not in db_category_names:
         db_category_names.append("Overig")
-        
-    all_categories = db_category_names + ["➕ Nieuwe categorie..."]
     
-    st.write(f"**{len(transactions)}** transacties wachten op bevestiging")
-    
-    # CSS to make the edit buttons look like plain, inline icons
-    st.markdown("""
-        <style>
-        /* Target buttons within our specific container */
-        .inline-edit-btn [data-testid="stButton"] button {
-            border: none !important;
-            background: transparent !important;
-            padding: 0px !important;
-            margin: 0px !important;
-            min-height: unset !important;
-            height: 20px !important;
-            width: 20px !important;
-            display: inline-flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            box-shadow: none !important;
-            color: #64748b !important; /* Muted gray by default */
-            transition: color 0.2s ease !important;
-        }
-        .inline-edit-btn [data-testid="stButton"] button:hover {
-            color: #1d4ed8 !important; /* Blue on hover */
-            background: transparent !important;
-        }
-        .inline-edit-btn [data-testid="stButton"] button:active, 
-        .inline-edit-btn [data-testid="stButton"] button:focus {
-            background: transparent !important;
-            box-shadow: none !important;
-            outline: none !important;
-            color: #1d4ed8 !important;
-        }
-        /* Further cleanup of Streamlit button artifacts */
-        .inline-edit-btn div[data-testid="stButton"] {
-            display: inline-block !important;
-            vertical-align: middle !important;
-        }
-        </style>
-    """, unsafe_allow_html=True)
-    
-    # Display transactions in editable format
-    for idx, trans in enumerate(transactions):
-        trans_id = trans['id']
-        name_key = f"edit_name_{trans_id}"
-        desc_key = f"edit_desc_{trans_id}"
-        
-        # Initialize session state keys if not present
-        if name_key not in st.session_state: st.session_state[name_key] = False
-        if desc_key not in st.session_state: st.session_state[desc_key] = False
-
-        with st.container():
-            # Main row layout: [Main Info (Name/Desc), Amount/Date, Category, Confirm Button]
-            col1, col2, col3, col4 = st.columns([5, 1.5, 2, 0.7])
-            
-            with col1:
-                # --- NAME FIELD ---
-                display_name = trans.get('naam_tegenpartij')
-                if not display_name or display_name.strip() in ["", "-", "--", "---"]:
-                    display_name = "Onbekend"
-                
-                # Use a very tight layout to keep the pencil right next to the text
-                name_cols = st.columns([20, 1], gap="small")
-                with name_cols[0]:
-                    if st.session_state[name_key]:
-                        new_name = st.text_input("Naam", value=display_name, key=f"input_name_{trans_id}", label_visibility="collapsed")
-                    else:
-                        st.markdown(f"**{display_name}**")
-                        new_name = display_name
-                with name_cols[1]:
-                    st.markdown('<div class="inline-edit-btn">', unsafe_allow_html=True)
-                    if st.button("✎", key=f"btn_name_{trans_id}", help="Naam bewerken"):
-                        st.session_state[name_key] = not st.session_state[name_key]
+    # Quick Add Category (since table dropdown can't easily handle "create new" with custom name input)
+    with st.expander("➕ Nieuwe Categorie Aanmaken", expanded=False):
+        c1, c2, c3 = st.columns([3, 1, 1])
+        with c1:
+            new_cat_quick = st.text_input("Naam nieuwe categorie", key="quick_cat_name", placeholder="Bijv. Hobby's")
+        with c2:
+            import random
+            colors = ["#ef4444", "#f97316", "#f59e0b", "#84cc16", "#10b981", "#06b6d4", "#3b82f6", "#8b5cf6", "#ec4899"]
+            new_cat_color_quick = st.color_picker("Kleur", random.choice(colors), key="quick_cat_color")
+        with c3:
+            st.write("") # Spacer
+            if st.button("Toevoegen", key="quick_cat_add"):
+                if new_cat_quick:
+                    from models.category import Category
+                    new_cat_obj = Category(name=new_cat_quick.strip(), color=new_cat_color_quick)
+                    if db_ops.create_category(new_cat_obj, user_id):
+                        st.success(f"Categorie '{new_cat_quick}' toegevoegd!")
                         st.rerun()
-                    st.markdown('</div>', unsafe_allow_html=True)
-
-                # --- DESCRIPTION FIELD ---
-                desc_cols = st.columns([20, 1], gap="small")
-                with desc_cols[0]:
-                    if st.session_state[desc_key]:
-                        new_desc = st.text_input("Omschrijving", value=trans.get('omschrijving', ''), key=f"input_desc_{trans_id}", label_visibility="collapsed")
                     else:
-                        st.caption(trans.get('omschrijving', '') or "Geen omschrijving")
-                        new_desc = trans.get('omschrijving', '')
-                with desc_cols[1]:
-                    st.markdown('<div class="inline-edit-btn">', unsafe_allow_html=True)
-                    if st.button("✎", key=f"btn_desc_{trans_id}", help="Omschrijving bewerken"):
-                        st.session_state[desc_key] = not st.session_state[desc_key]
-                        st.rerun()
-                    st.markdown('</div>', unsafe_allow_html=True)
-            
-            with col2:
-                # Align amount and date
-                st.markdown(f"### €{trans['bedrag']:,.2f}")
-                st.caption(trans['datum'])
-            
-            with col3:
-                # Category selector
-                current_category = trans.get('categorie', 'Overig')
-                cat_index = 0
-                
-                # If current category isn't in our DB list (ghost category), default to Overig or logic
-                if current_category in db_category_names:
-                    cat_index = db_category_names.index(current_category)
+                        st.error("Kon categorie niet aanmaken")
                 else:
-                    # Try fuzzy lowercase match
-                    found = False
-                    for i, name in enumerate(db_category_names):
-                        if name.lower() == current_category.lower():
-                            cat_index = i
-                            found = True
-                            break
-                    if not found and "Overig" in db_category_names:
-                        cat_index = db_category_names.index("Overig")
+                    st.warning("Vul een naam in")
 
-                new_category = st.selectbox(
-                    "Categorie",
-                    options=all_categories,
-                    index=cat_index,
-                    key=f"cat_{trans_id}",
-                    label_visibility="collapsed"
+    st.write(f"**{len(transactions)}** transacties wachten op bevestiging")
+
+    # Convert to DataFrame for editing
+    df_data = []
+    for t in transactions:
+        display_name = t.get('naam_tegenpartij')
+        if not display_name or display_name.strip() in ["", "-", "--", "---"]:
+            display_name = "Onbekend"
+            
+        current_category = t.get('categorie', 'Overig')
+        if current_category not in db_category_names:
+            current_category = "Overig"
+
+        df_data.append({
+            "Select": False,
+            "Datum": datetime.strptime(t['datum'], '%Y-%m-%d').date() if isinstance(t['datum'], str) else t['datum'],
+            "Tegenpartij": display_name,
+            "Bedrag": float(t['bedrag']),
+            "Categorie": current_category,
+            "Lopende": t.get('is_lopende_rekening', False),
+            "Omschrijving": t.get('omschrijving', '') or "",
+            "id": t['id'] # Hidden column
+        })
+    
+    df = pd.DataFrame(df_data)
+
+    # Calculate height to avoid scrolling (approx 35px per row + 38px header + buffer)
+    # Max height to prevent page becoming too huge, e.g., 2000px
+    row_height = 35
+    header_height = 40
+    calculated_height = (len(df) * row_height) + header_height + 10
+    
+    # Display Data Editor
+    edited_df = st.data_editor(
+        df,
+        column_config={
+            "Select": st.column_config.CheckboxColumn(
+                "✅",
+                width="small",
+                default=False,
+            ),
+            "Datum": st.column_config.DateColumn(
+                "Datum",
+                format="DD/MM/YYYY",
+                step=1,
+            ),
+            "Tegenpartij": st.column_config.TextColumn(
+                "Tegenpartij",
+                required=True,
+            ),
+            "Bedrag": st.column_config.NumberColumn(
+                "Bedrag",
+                format="€ %.2f",
+            ),
+            "Categorie": st.column_config.SelectboxColumn(
+                "Categorie",
+                options=db_category_names,
+                required=True,
+            ),
+            "Lopende": st.column_config.CheckboxColumn(
+                "⏳",
+                help="Markeer als lopende rekening (vooruitbetaald)",
+                default=False,
+                width="small"
+            ),
+            "Omschrijving": st.column_config.TextColumn(
+                "Omschrijving",
+            ),
+            "id": None # Hide ID column
+        },
+        hide_index=True,
+        use_container_width=True,
+        height=calculated_height, 
+        key="editor_pending"
+    )
+
+    # Bulk Actions
+    col_confirm, col_delete, col_spacer = st.columns([1, 1, 3])
+    
+    with col_confirm:
+        if st.button("✅ Bevestig Selectie & Opslaan", type="primary", use_container_width=True):
+            # Create a lookup for original transactions
+            trans_map = {t['id']: t for t in transactions}
+            
+            success_count = 0
+            saved_count = 0
+            
+            for index, row in edited_df.iterrows():
+                trans_id = row['id']
+                original_trans = trans_map.get(trans_id)
+                
+                if not original_trans:
+                    continue
+                    
+                # Determine if confirmed
+                is_selected = row['Select']
+                
+                # Check for changes
+                new_category_name = row['Categorie']
+                cat_id = cat_name_to_id.get(new_category_name)
+                
+                if not cat_id:
+                    st.error(f"Categorie '{new_category_name}' niet gevonden.")
+                    continue
+                
+                # Prepare value for DB
+                current_values = {
+                    "datum": row['Datum'].isoformat(),
+                    "bedrag": float(row['Bedrag']),
+                    "naam_tegenpartij": row['Tegenpartij'],
+                    "omschrijving": row['Omschrijving'],
+                    "categorie_id": cat_id,
+                    "is_confirmed": is_selected,
+                    "is_lopende_rekening": row['Lopende']
+                }
+                
+                # Compare with original
+                orig_cat = original_trans.get('categorie', 'Overig')
+                if orig_cat not in db_category_names: orig_cat = "Overig"
+                
+                has_changes = (
+                    original_trans['datum'] != current_values['datum'] or
+                    float(original_trans['bedrag']) != current_values['bedrag'] or
+                    (original_trans['naam_tegenpartij'] or "") != current_values['naam_tegenpartij'] or
+                    (original_trans['omschrijving'] or "") != current_values['omschrijving'] or
+                    orig_cat != new_category_name or
+                    original_trans.get('is_lopende_rekening', False) != current_values['is_lopende_rekening'] or
+                    is_selected
                 )
                 
-                custom_cat_name = None
-                if new_category == "➕ Nieuwe categorie...":
-                    custom_cat_name = st.text_input("Nieuwe naam", key=f"new_cat_inp_{trans_id}", placeholder="Typ naam...", label_visibility="collapsed")
-            
-            with col4:
-                # Combined Save & Confirm button
-                if st.button("✅", key=f"conf_{trans_id}", type="primary", use_container_width=True):
-                    
-                    final_category_id = None
-                    final_category_name = new_category
-                    
-                    # Handle new category creation
-                    if new_category == "➕ Nieuwe categorie...":
-                        if custom_cat_name and custom_cat_name.strip():
-                            # Create the new category
-                            from models.category import Category
-                            # Determine color (cycle or random)
-                            import random
-                            colors = ["#ef4444", "#f97316", "#f59e0b", "#84cc16", "#10b981", "#06b6d4", "#3b82f6", "#8b5cf6", "#ec4899"]
-                            new_cat_obj = Category(name=custom_cat_name.strip(), color=random.choice(colors))
-                            
-                            created_id = db_ops.create_category(new_cat_obj, user_id)
-                            if created_id:
-                                final_category_id = created_id
-                                final_category_name = custom_cat_name.strip()
-                                st.toast(f"Categorie '{final_category_name}' aangemaakt!")
-                            else:
-                                st.error("Kon categorie niet aanmaken")
-                                st.stop()
-                        else:
-                            st.warning("Vul een naam in voor de nieuwe categorie")
-                            st.stop()
-                    else:
-                        final_category_id = cat_name_to_id.get(new_category)
-                        final_category_name = new_category
-
-                    updates = {
-                        "is_confirmed": True,
-                        "categorie_id": final_category_id,
-                        "naam_tegenpartij": new_name,
-                        "omschrijving": new_desc
-                    }
+                if has_changes:
+                    # Perform Update
+                    updates = current_values
                     
                     if db_ops.update_transaction(trans_id, updates, user_id):
-                        # Learning logic
-                        # If the final category is different from what was AUTO suggested (in 'categorie' field of trans)
-                        # calculate rule.
-                        current_auto_cat = trans.get('categorie')
-                        if final_category_name != current_auto_cat:
-                             trans_obj = Transaction(
-                                datum=datetime.strptime(trans['datum'], '%Y-%m-%d').date() if isinstance(trans['datum'], str) else trans['datum'],
-                                bedrag=Decimal(str(trans['bedrag'])),
-                                naam_tegenpartij=new_name,
-                                omschrijving=new_desc
-                            )
-                             # Note: learn_from_correction returns a rule dict
-                             # It doesn't modify the new category, just suggests a rule for it
-                             learned_rule = cat_engine.learn_from_correction(trans_obj, final_category_name)
-                             
-                             if learned_rule and learned_rule.get('rule'):
-                                # Add this rule to the category (new or existing)
-                                existing_cat = db_ops.get_category_by_name(final_category_name, user_id)
-                                if existing_cat:
-                                    current_rules = existing_cat.get('rules', [])
-                                    # unique check
-                                    if not any(r == learned_rule['rule'] for r in current_rules):
-                                        current_rules.append(learned_rule['rule'])
-                                        db_ops.update_category_rules(existing_cat['id'], current_rules, user_id)
-                                        st.toast(f"💡 Regel geleerd voor '{final_category_name}'")
-                        
-                        # Cleanup session state
-                        if name_key in st.session_state: del st.session_state[name_key]
-                        if desc_key in st.session_state: del st.session_state[desc_key]
-                        st.rerun()
+                        if is_selected:
+                            success_count += 1
+                            
+                            # Learning Logic
+                            original_auto_cat = original_trans.get('categorie')
+                            if new_category_name != original_auto_cat:
+                                 trans_obj = Transaction(
+                                    datum=row['Datum'],
+                                    bedrag=Decimal(str(row['Bedrag'])),
+                                    naam_tegenpartij=row['Tegenpartij'],
+                                    omschrijving=row['Omschrijving']
+                                )
+                                 learned_rule = cat_engine.learn_from_correction(trans_obj, new_category_name)
+                                 
+                                 if learned_rule and learned_rule.get('rule'):
+                                    existing_cat = db_ops.get_category_by_name(new_category_name, user_id)
+                                    if existing_cat:
+                                        current_rules = existing_cat.get('rules', [])
+                                        if not any(r == learned_rule['rule'] for r in current_rules):
+                                            current_rules.append(learned_rule['rule'])
+                                            db_ops.update_category_rules(existing_cat['id'], current_rules, user_id)
+                        else:
+                            saved_count += 1
             
-            st.divider()
+            if success_count > 0 or saved_count > 0:
+                msg = []
+                if success_count > 0: msg.append(f"{success_count} bevestigd")
+                if saved_count > 0: msg.append(f"{saved_count} opgeslagen")
+                st.success(f"Actie voltooid: {', '.join(msg)}!")
+                st.rerun()
+    
+    with col_delete:
+        if st.button("🗑️ Selectie Verwijderen", type="secondary", use_container_width=True):
+            # Get selected transactions
+            selected_rows = edited_df[edited_df["Select"] == True]
+            
+            if selected_rows.empty:
+                st.warning("Selecteer ten minste één transactie om te verwijderen.")
+            else:
+                deleted_count = 0
+                for index, row in selected_rows.iterrows():
+                    trans_id = row['id']
+                    if db_ops.delete_transaction(trans_id, user_id):
+                        deleted_count += 1
+                
+                if deleted_count > 0:
+                    st.success(f"{deleted_count} transacties verwijderd!")
+                    st.rerun()
+
+    # Handle inline edits (optional: save changes even without confirming?)
+    # For now, we only save when "Confirm" is clicked. 
+    # User might expect "editing" to just save locally until confirmed.
+    # If the user edits a field but DOES NOT select the checkbox, the edit is effectively "lost" upon rerun if we don't handle it.
+    # However, st.data_editor state persists across reruns.
+    # But if real-time persistence is needed for UNCONFIRMED edits, we'd need to compare edited_df with 'transactions' and trigger updates.
+    # Given the request focused on "checkbox to select", bulk confirmation is the standard pattern.
+    
+    st.divider()
 
 def show_confirmed_history(user_id: str, db_ops: DatabaseOperations):
     """Show confirmed transactions with filters."""
