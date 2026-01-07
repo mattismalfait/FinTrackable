@@ -37,6 +37,7 @@ def show_categorization_review():
 import pandas as pd
 from datetime import datetime, date, timedelta
 
+@st.fragment
 def show_pending_review(user_id: str, db_ops: DatabaseOperations):
     """Show pending (unconfirmed) transactions review interface."""
     

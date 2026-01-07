@@ -40,6 +40,7 @@ CREATE TABLE public.transactions (
   bedrag numeric NOT NULL,
   naam_tegenpartij text,
   omschrijving text,
+  rekeningnummer text,
   categorie_id uuid,
   hash text NOT NULL UNIQUE,
   created_at timestamp with time zone DEFAULT now(),

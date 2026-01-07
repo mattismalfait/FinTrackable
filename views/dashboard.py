@@ -66,7 +66,15 @@ def show_dashboard():
         st.subheader("Selecteer Categorieën")
         user_categories = db_ops.get_categories(user.id)
         cat_engine = CategorizationEngine(user_categories)
-        all_categories = sorted(cat_engine.get_category_names())
+        # Filter categories: Only show those defined in DB OR used in transactions
+        defined_names = {c['name'] for c in user_categories}
+        used_names = {t.get('categorie', 'Overig') for t in transactions}
+        all_categories = sorted(list(defined_names.union(used_names)))
+        
+        # Ensure Overig is always present
+        if "Overig" not in all_categories:
+            all_categories.append("Overig")
+            all_categories.sort()
         
         # Select All logic
         if 'select_all_cats' not in st.session_state:
@@ -304,10 +312,21 @@ def show_budget_comparison(analytics: Analytics, categories: list[dict], user_id
         
     # Percentage Editor
     with st.expander("⚙️ Budget Verdeling Aanpassen"):
+        # filter out income category for budget setting
+        budgetable_cats = [c for c in categories if c['name'] != "Inkomen"]
+        
+        # Calculate current total
+        current_total = sum(int(c.get('percentage', 0) or 0) for c in budgetable_cats)
+        
+        st.write(f"**Totaal Gebudgetteerd:** {current_total}%")
+        if current_total > 100:
+            st.warning("⚠️ Je hebt meer dan 100% van je inkomen verdeeld!")
+            st.progress(1.0)
+        else:
+            st.progress(current_total / 100)
+            
         with st.form("budget_form"):
             new_percentages = {}
-            # filter out income category for budget setting
-            budgetable_cats = [c for c in categories if c['name'] != "Inkomen"]
             
             cols = st.columns(min(len(budgetable_cats), 3) or 1)
             for i, cat in enumerate(budgetable_cats):

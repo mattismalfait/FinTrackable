@@ -107,17 +107,28 @@ def show_file_upload():
                 # Generate hashes for new transactions (if not already done)
                 unique_transactions = []
                 duplicate_count = 0
+                import hashlib
                 
                 for t in transactions:
                     if not t.hash:
                         t.generate_hash()
                     
+                    # Calculate legacy hash for backward compatibility
+                    # Old format: datum|bedrag|naam_tegenpartij|omschrijving
+                    legacy_str = f"{t.datum}|{t.bedrag}|{t.naam_tegenpartij or ''}|{t.omschrijving or ''}"
+                    legacy_hash = hashlib.md5(legacy_str.encode()).hexdigest()
+                    
                     if t.hash in existing_hashes:
                         duplicate_count += 1
+                        # st.write(f"Strict Duplicate: {t.hash}") # Debug
+                    elif legacy_hash in existing_hashes:
+                        duplicate_count += 1
+                        # st.write(f"Legacy Duplicate: {legacy_hash} for {t.bedrag}") # Debug
                     else:
                         unique_transactions.append(t)
-                        # Add to set to prevent duplicates within the same upload file
+                        # Add both to set to prevent duplicates within the same upload file
                         existing_hashes.add(t.hash)
+                        existing_hashes.add(legacy_hash)
                 
                 if duplicate_count > 0:
                     st.info(f"ℹ️ **{duplicate_count}** dubbele transacties zijn eruit gefilterd (al in systeem).")
