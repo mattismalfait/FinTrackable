@@ -23,6 +23,12 @@ class Transaction(BaseModel):
     is_lopende_rekening: bool = False
     hash: Optional[str] = None
     
+    # AI Metadata
+    ai_name: Optional[str] = None
+    ai_reasoning: Optional[str] = None
+    ai_confidence: Optional[float] = None
+
+    
     class Config:
         arbitrary_types_allowed = True
     
@@ -34,7 +40,8 @@ class Transaction(BaseModel):
         Returns:
             str: MD5 hash of transaction key fields
         """
-        hash_string = f"{self.datum}|{self.bedrag}|{self.naam_tegenpartij or ''}|{self.omschrijving or ''}"
+        # Remove omschrijving from hash calculation as requested
+        hash_string = f"{self.datum}|{self.bedrag}|{self.naam_tegenpartij or ''}"
         self.hash = hashlib.md5(hash_string.encode()).hexdigest()
         return self.hash
     
@@ -48,8 +55,12 @@ class Transaction(BaseModel):
             "categorie_id": self.categorie_id,
             "is_confirmed": self.is_confirmed,
             "is_lopende_rekening": self.is_lopende_rekening,
-            "hash": self.hash or self.generate_hash()
+            "hash": self.hash or self.generate_hash(),
+            "ai_name": self.ai_name,
+            "ai_reasoning": self.ai_reasoning,
+            "ai_confidence": self.ai_confidence
         }
+
     
     def is_income(self) -> bool:
         """Check if transaction is income (positive amount)."""

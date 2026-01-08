@@ -3,11 +3,10 @@ Analytics service for financial data aggregation and calculations.
 """
 
 import pandas as pd
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Tuple
 from datetime import date, datetime
+from functools import lru_cache, cached_property
 from decimal import Decimal
-from collections import defaultdict
-import calendar
 
 class Analytics:
     """Financial analytics and aggregation calculations."""
@@ -19,36 +18,59 @@ class Analytics:
         Args:
             transactions: List of transaction dictionaries from database
         """
-        self.df = pd.DataFrame(transactions) if transactions else pd.DataFrame()
+        # Optimize DataFrame creation
+        if not transactions:
+            self.df = pd.DataFrame(columns=['id', 'datum', 'bedrag', 'categorie', 'naam_tegenpartij', 'omschrijving'])
+        else:
+            self.df = pd.DataFrame(transactions)
         
         if not self.df.empty:
-            # Convert datum to datetime
+            # Vectorized conversions are faster
             self.df['datum'] = pd.to_datetime(self.df['datum'])
-            # Convert bedrag to float
-            self.df['bedrag'] = self.df['bedrag'].astype(float)
-            # Extract month and year
+            self.df['bedrag'] = pd.to_numeric(self.df['bedrag'], errors='coerce').fillna(0.0)
+            
+            # Normalize category names
+            if 'categorie' in self.df.columns:
+                self.df['categorie'] = self.df['categorie'].fillna('Overig').astype(str).str.strip()
+            else:
+                self.df['categorie'] = 'Overig'
+                
+            # Extract month and year efficiently
             self.df['month'] = self.df['datum'].dt.to_period('M')
             self.df['year'] = self.df['datum'].dt.year
-    
+
+    @cached_property
+    def _positive_transactions(self) -> pd.DataFrame:
+        """Cached view of positive transactions."""
+        return self.df[self.df['bedrag'] > 0] if not self.df.empty else self.df
+
+    @cached_property
+    def _negative_transactions(self) -> pd.DataFrame:
+        """Cached view of negative transactions."""
+        return self.df[self.df['bedrag'] < 0] if not self.df.empty else self.df
+
+    @lru_cache(maxsize=1)
     def get_total_income(self) -> float:
         """Get total income (positive transactions)."""
         if self.df.empty:
             return 0.0
-        return float(self.df[self.df['bedrag'] > 0]['bedrag'].sum())
+        return float(self._positive_transactions['bedrag'].sum())
     
+    @lru_cache(maxsize=1)
     def get_total_expenses(self) -> float:
         """Get total expenses (negative transactions, as positive number)."""
         if self.df.empty:
             return 0.0
-        return abs(float(self.df[self.df['bedrag'] < 0]['bedrag'].sum()))
+        return abs(float(self._negative_transactions['bedrag'].sum()))
     
     def get_net_balance(self) -> float:
         """Get net balance (income - expenses)."""
         return self.get_total_income() - self.get_total_expenses()
     
+    @lru_cache(maxsize=1)
     def get_category_totals(self) -> Dict[str, float]:
         """
-        Get total spending/income per category.
+        Get total spending/income per category (net).
         
         Returns:
             Dict mapping category name to total amount
@@ -56,9 +78,27 @@ class Analytics:
         if self.df.empty:
             return {}
         
-        category_totals = self.df.groupby('categorie')['bedrag'].sum().to_dict()
-        return {k: float(v) for k, v in category_totals.items()}
+        category_totals = self.df.groupby('categorie')['bedrag'].sum()
+        return category_totals.to_dict()
     
+    def get_category_spending(self, category_name: str) -> float:
+        """
+        Get gross spending (sum of negative amounts only) for a category.
+        
+        Args:
+            category_name: Name of the category
+            
+        Returns:
+            Total absolute spending amount
+        """
+        if self.df.empty:
+            return 0.0
+        
+        # Use vectorized boolean indexing
+        mask = (self.df['categorie'] == category_name) & (self.df['bedrag'] < 0)
+        return abs(float(self.df.loc[mask, 'bedrag'].sum())) # .loc is slightly explicit, usually safe
+
+    @lru_cache(maxsize=1)
     def get_monthly_totals(self) -> pd.DataFrame:
         """
         Get monthly aggregates.
@@ -69,18 +109,28 @@ class Analytics:
         if self.df.empty:
             return pd.DataFrame(columns=['month', 'income', 'expenses', 'net'])
         
-        monthly = self.df.groupby('month').apply(
-            lambda x: pd.Series({
-                'income': float(x[x['bedrag'] > 0]['bedrag'].sum()),
-                'expenses': abs(float(x[x['bedrag'] < 0]['bedrag'].sum())),
-            })
-        ).reset_index()
+        # Optimized groupby without apply(lambda)
+        monthly_groups = self.df.groupby('month')
         
+        # Calculate income (sum of positive) and expenses (sum of negative)
+        # We can do this by first separating, then grouping
+        
+        income_series = self.df[self.df['bedrag'] > 0].groupby('month')['bedrag'].sum()
+        expenses_series = self.df[self.df['bedrag'] < 0].groupby('month')['bedrag'].sum()
+        
+        # Combine into DataFrame
+        monthly = pd.DataFrame({
+            'income': income_series,
+            'expenses': expenses_series.abs() # store as positive
+        }).fillna(0.0)
+        
+        monthly = monthly.reset_index()
         monthly['net'] = monthly['income'] - monthly['expenses']
         monthly['month'] = monthly['month'].astype(str)
         
         return monthly
     
+    @lru_cache(maxsize=1)
     def get_monthly_by_category(self) -> pd.DataFrame:
         """
         Get monthly totals broken down by category.
@@ -98,6 +148,7 @@ class Analytics:
         
         return monthly_cat
     
+    @lru_cache(maxsize=1)
     def get_investment_percentage(self) -> float:
         """
         Calculate percentage of income going to investments.
@@ -113,11 +164,13 @@ class Analytics:
             return 0.0
         
         # Get investments (assuming "Investeren" category)
-        investments = self.df[self.df['categorie'] == 'Investeren']['bedrag'].sum()
+        investments_mask = self.df['categorie'] == 'Investeren'
+        investments = self.df.loc[investments_mask, 'bedrag'].sum()
         investments = abs(float(investments))  # Make positive if negative
         
         return (investments / total_income) * 100
     
+    @lru_cache(maxsize=1)
     def get_year_over_year_comparison(self) -> Dict[int, Dict[str, float]]:
         """
         Get yearly comparison data.
@@ -130,15 +183,16 @@ class Analytics:
         
         yearly_data = {}
         
-        for year in self.df['year'].unique():
-            year_df = self.df[self.df['year'] == year]
-            
-            income = float(year_df[year_df['bedrag'] > 0]['bedrag'].sum())
-            expenses = abs(float(year_df[year_df['bedrag'] < 0]['bedrag'].sum()))
+        # Optimize by doing one groupby instead of filtering in a loop
+        yearly_groups = self.df.groupby('year')
+        
+        for year, group in yearly_groups:
+            income = float(group[group['bedrag'] > 0]['bedrag'].sum())
+            expenses = abs(float(group[group['bedrag'] < 0]['bedrag'].sum()))
             net = income - expenses
             
             # Investment percentage
-            investments = abs(float(year_df[year_df['categorie'] == 'Investeren']['bedrag'].sum()))
+            investments = abs(float(group[group['categorie'] == 'Investeren']['bedrag'].sum()))
             investment_pct = (investments / income * 100) if income > 0 else 0
             
             yearly_data[int(year)] = {
@@ -164,16 +218,16 @@ class Analytics:
             return {}
         
         if expense_only:
-            df_subset = self.df[self.df['bedrag'] < 0].copy()
+            df_subset = self._negative_transactions.copy()
         else:
             df_subset = self.df.copy()
+            
+        # Optimization: Don't create new column 'bedrag_abs', just abs() the sum result
+        breakdown = df_subset.groupby('categorie')['bedrag'].sum().abs().to_dict()
         
-        df_subset['bedrag_abs'] = df_subset['bedrag'].abs()
-        breakdown = df_subset.groupby('categorie')['bedrag_abs'].sum().to_dict()
-        
-        return {k: float(v) for k, v in breakdown.items()}
+        return {str(k): float(v) for k, v in breakdown.items()}
     
-    def get_date_range(self) -> tuple:
+    def get_date_range(self) -> Tuple[Optional[date], Optional[date]]:
         """
         Get the date range of transactions.
         
@@ -185,9 +239,32 @@ class Analytics:
         
         return (self.df['datum'].min().date(), self.df['datum'].max().date())
     
+    # NOTE: In the refactor, direct mutation filter methods like filter_by_date_range 
+    # should be avoided if we want immutability, but sticking to existing pattern for now
+    # while optimizing internals.
+    # Actually, modifying self.df invalidates cached properties. 
+    # Since we are caching, we must clear cache if we modify self.df.
+    # Better approach: The UI should create a NEW Analytics instance for filtered views.
+    # I will allow these methods but they will clear the cache (or I'll remove lru_cache for methods that depend on mutable state?)
+    # Actually, the best way for this existing app structure is to treat Analytics as immutable locally 
+    # and have the UI instantiate a fresh one for filtered data (which `views/dashboard.py` already does!)
+    # So I will REMOVE the mutator methods `filter_by_date_range` and `filter_by_categories` from this class
+    # and rely on the UI passing filtered lists or creating new Analytics objects. 
+    # BUT, `views/dashboard.py` currently CALLS them. I need to keep them or refactor UI.
+    # Refactoring UI is part of the plan. I will keep them but make sure they handle cache clearing if used.
+    # OR simpler: Don't cache everything, or just accept that `dashboard.py` creates a NEW instance for filtered data anyway.
+    # Checking dashboard.py:
+    # 1. `analytics = Analytics(dashboard_transactions)`
+    # 2. `analytics.filter_by_date_range(...)` -> This MUTATES local state.
+    # 3. `analytics.filter_by_categories(...)` -> Mutates local state.
+    # 
+    # If I add caching, mutation becomes dangerous.
+    # I will support mutation but I need to clear cache.
+    
     def filter_by_date_range(self, start_date: date, end_date: date):
         """
         Filter transactions by date range in place.
+        INVALIDATES CACHE.
         
         Args:
             start_date: Start date
@@ -196,16 +273,36 @@ class Analytics:
         if not self.df.empty:
             mask = (self.df['datum'].dt.date >= start_date) & (self.df['datum'].dt.date <= end_date)
             self.df = self.df[mask]
+            self._clear_caches()
     
     def filter_by_categories(self, categories: List[str]):
         """
         Filter transactions by categories in place.
+        INVALIDATES CACHE.
         
         Args:
             categories: List of category names to include
         """
         if not self.df.empty and categories:
             self.df = self.df[self.df['categorie'].isin(categories)]
+            self._clear_caches()
+
+    def _clear_caches(self):
+        """Clear all LRU caches and cached properties."""
+        # Clear cached properties
+        if '_positive_transactions' in self.__dict__:
+            del self.__dict__['_positive_transactions']
+        if '_negative_transactions' in self.__dict__:
+            del self.__dict__['_negative_transactions']
+        
+        # Clear LRU caches
+        self.get_total_income.cache_clear()
+        self.get_total_expenses.cache_clear()
+        self.get_category_totals.cache_clear()
+        self.get_monthly_totals.cache_clear()
+        self.get_monthly_by_category.cache_clear()
+        self.get_investment_percentage.cache_clear()
+        self.get_year_over_year_comparison.cache_clear()
     
     def get_top_transactions(self, n: int = 10, by: str = 'amount') -> List[Dict]:
         """

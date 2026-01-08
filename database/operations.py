@@ -2,12 +2,11 @@
 Database operations for transactions, categories, and user preferences.
 """
 
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Set, Tuple, Union, Any
 from datetime import date, datetime
 from database.connection import get_supabase_client
 from models.transaction import Transaction
 from models.category import Category
-import streamlit as st
 
 class DatabaseOperations:
     """Handle all database CRUD operations."""
@@ -19,7 +18,7 @@ class DatabaseOperations:
     # TRANSACTION OPERATIONS
     # ========================================================================
     
-    def get_existing_hashes(self, user_id: str) -> set:
+    def get_existing_hashes(self, user_id: str) -> Set[str]:
         """
         Get set of all existing transaction hashes for a user.
         
@@ -34,16 +33,13 @@ class DatabaseOperations:
             
         try:
             # Fetch all hashes for this user
-            # We use a large limit to get everything (Supabase default is 1000)
-            # You might need pagination for huge datasets, but for personal finance this works for now
             response = self.client.table("transactions").select("hash").eq("user_id", user_id).limit(10000).execute()
-            
             return {item['hash'] for item in response.data if item.get('hash')}
         except Exception as e:
-            st.error(f"Error checking duplicates: {str(e)}")
+            print(f"Error checking duplicates: {str(e)}")
             return set()
 
-    def insert_transactions(self, transactions: List[Transaction], user_id: str) -> Dict:
+    def insert_transactions(self, transactions: List[Transaction], user_id: str) -> Dict[str, Any]:
         """
         Insert multiple transactions into the database.
         Skips duplicates based on hash.
@@ -58,8 +54,8 @@ class DatabaseOperations:
         if not self.client:
             return {"success": 0, "skipped": 0, "errors": ["No database connection"]}
         
-        # If we didn't filter before calling this function, we do it here one by one (slow)
-        # But ideally, we should use get_existing_hashes before
+        # Ideally, we should use get_existing_hashes before calling this for bulk filtering,
+        # but this method handles individual insertion safely.
         
         success_count = 0
         skipped_count = 0
@@ -122,39 +118,44 @@ class DatabaseOperations:
             if end_date:
                 query = query.lte("datum", end_date.isoformat())
             if category:
-                # If category is provided as a name, we might need a separate query or handle it by ID
-                # For now, we'll assume filter by ID if it's a UUID, otherwise by name via join
                 if len(category) > 30 and "-" in category: # Simple UUID check
                     query = query.eq("categorie_id", category)
                 else:
-                    # Filter by category name in the joined table
-                    # Note: Supabase filtering on joined tables can be tricky, 
-                    # but usually it's 'categories.name'
                     query = query.eq("categories.name", category)
                     
             if is_confirmed is not None:
                 query = query.eq("is_confirmed", is_confirmed)
             
             # Order by date descending
-            query = query.order("datum", desc=True)
+            query = query.order("datum", desc=True).limit(5000)
             
             response = query.execute()
-            
+
             # Flatten the response for easier use
             processed_data = []
             for item in response.data:
-                category_info = item.get('categories', {})
+                category_info = item.get('categories')
+                # Handle both None and empty dict/list cases
                 if category_info:
-                    item['categorie'] = category_info.get('name', 'Overig')
-                    item['color'] = category_info.get('color', '#9ca3af')
+                    # If it's a list (sometimes happens with 1:many joins, though here it's 1:1), take first
+                    if isinstance(category_info, list) and len(category_info) > 0:
+                        cat_data = category_info[0]
+                    elif isinstance(category_info, dict):
+                        cat_data = category_info
+                    else:
+                        cat_data = {}
+                    
+                    item['categorie'] = str(cat_data.get('name', 'Overig')).strip()
+                    item['color'] = cat_data.get('color', '#9ca3af')
                 else:
                     item['categorie'] = 'Overig'
                     item['color'] = '#9ca3af'
+                    
                 processed_data.append(item)
                 
             return processed_data
         except Exception as e:
-            st.error(f"Error fetching transactions: {str(e)}")
+            print(f"Error fetching transactions: {str(e)}")
             return []
     
     def confirm_transaction(self, transaction_id: str, user_id: str) -> bool:
@@ -167,7 +168,7 @@ class DatabaseOperations:
             ).eq("id", transaction_id).eq("user_id", user_id).execute()
             return True
         except Exception as e:
-            st.error(f"Error confirming transaction: {str(e)}")
+            print(f"Error confirming transaction: {str(e)}")
             return False
 
     def update_transaction(self, transaction_id: str, updates: Dict, user_id: str) -> bool:
@@ -189,7 +190,7 @@ class DatabaseOperations:
             self.client.table("transactions").update(updates).eq("id", transaction_id).eq("user_id", user_id).execute()
             return True
         except Exception as e:
-            st.error(f"Error updating transaction: {str(e)}")
+            print(f"Error updating transaction: {str(e)}")
             return False
     
     def delete_transaction(self, transaction_id: str, user_id: str) -> bool:
@@ -207,13 +208,15 @@ class DatabaseOperations:
             return False
             
         try:
-            response = self.client.table("transactions").delete().eq("id", transaction_id).eq("user_id", user_id).execute()
+            self.client.table("transactions").delete().eq("id", transaction_id).eq("user_id", user_id).execute()
             return True
         except Exception as e:
-            st.error(f"Error deleting transaction: {str(e)}")
+            print(f"Error deleting transaction: {str(e)}")
             return False
 
-    def update_transaction_category(self, transaction_id: str, category_id: str, user_id: str) -> bool:
+    def update_transaction_category(self, transaction_id: str, category_id: str, user_id: str, 
+                                    is_confirmed: bool = False, is_lopende_rekening: bool = False, 
+                                    transaction_data: Dict = {}) -> bool:
         """
         Update the category ID of a transaction.
         
@@ -221,6 +224,9 @@ class DatabaseOperations:
             transaction_id: Transaction ID
             category_id: New category ID
             user_id: User ID for verification
+            is_confirmed: Whether the transaction is confirmed
+            is_lopende_rekening: Whether the transaction is a current account transaction
+            transaction_data: Dictionary containing additional transaction data like AI metadata
             
         Returns:
             bool: True if successful
@@ -229,12 +235,25 @@ class DatabaseOperations:
             return False
         
         try:
-            self.client.table("transactions").update(
-                {"categorie_id": category_id}
-            ).eq("id", transaction_id).eq("user_id", user_id).execute()
+            # Update is_confirmed, is_lopende_rekening, and AI metadata
+            update_data = {
+                "categorie_id": category_id,
+                "is_confirmed": is_confirmed,
+                "is_lopende_rekening": is_lopende_rekening,
+                "updated_at": datetime.now().isoformat()
+            }
+            
+            # Optionally update AI metadata if provided
+            if "ai_name" in transaction_data: update_data["ai_name"] = transaction_data["ai_name"]
+            if "ai_reasoning" in transaction_data: update_data["ai_reasoning"] = transaction_data["ai_reasoning"]
+            if "ai_confidence" in transaction_data: update_data["ai_confidence"] = transaction_data["ai_confidence"]
+            if "naam_tegenpartij" in transaction_data: update_data["naam_tegenpartij"] = transaction_data["naam_tegenpartij"]
+
+            response = self.client.table("transactions").update(update_data).eq("id", transaction_id).eq("user_id", user_id).execute()
+
             return True
         except Exception as e:
-            st.error(f"Error updating transaction category: {str(e)}")
+            print(f"Error updating transaction category: {str(e)}")
             return False
     
     def delete_all_transactions(self, user_id: str) -> bool:
@@ -254,7 +273,7 @@ class DatabaseOperations:
             self.client.table("transactions").delete().eq("user_id", user_id).execute()
             return True
         except Exception as e:
-            st.error(f"Error deleting transactions: {str(e)}")
+            print(f"Error deleting transactions: {str(e)}")
             return False
     
     # ========================================================================
@@ -278,7 +297,7 @@ class DatabaseOperations:
             response = self.client.table("categories").select("*").eq("user_id", user_id).execute()
             return response.data
         except Exception as e:
-            st.error(f"Error fetching categories: {str(e)}")
+            print(f"Error fetching categories: {str(e)}")
             return []
     
     def get_category_by_name(self, name: str, user_id: str) -> Optional[Dict]:
@@ -316,7 +335,7 @@ class DatabaseOperations:
                 return response.data[0]['id']
             return None
         except Exception as e:
-            st.error(f"Error creating category: {str(e)}")
+            print(f"Error creating category: {str(e)}")
             return None
 
     def update_category_percentage(self, category_id: str, percentage: int, user_id: str) -> bool:
@@ -329,7 +348,7 @@ class DatabaseOperations:
             ).eq("id", category_id).eq("user_id", user_id).execute()
             return True
         except Exception as e:
-            st.error(f"Error updating category percentage: {str(e)}")
+            print(f"Error updating category percentage: {str(e)}")
             return False
     
     def update_category_rules(self, category_id: str, rules: List[Dict], user_id: str) -> bool:
@@ -353,7 +372,7 @@ class DatabaseOperations:
             ).eq("id", category_id).eq("user_id", user_id).execute()
             return True
         except Exception as e:
-            st.error(f"Error updating category rules: {str(e)}")
+            print(f"Error updating category rules: {str(e)}")
             return False
     
     # ========================================================================
@@ -379,7 +398,7 @@ class DatabaseOperations:
                 return response.data[0]
             return None
         except Exception as e:
-            st.error(f"Error fetching preferences: {str(e)}")
+            print(f"Error fetching preferences: {str(e)}")
             return None
     
     def create_or_update_preferences(self, user_id: str, preferences: Dict) -> bool:
@@ -411,10 +430,10 @@ class DatabaseOperations:
             
             return True
         except Exception as e:
-            st.error(f"Error saving preferences: {str(e)}")
+            print(f"Error saving preferences: {str(e)}")
             return False
 
-    def get_or_create_user(self, user_id: str, email: str, first_name: str, second_name: str, password: Optional[str] = None) -> Optional[Dict]:
+    def get_or_create_user(self, user_id: str, email: str, first_name: str, second_name: str, password: Optional[str] = None):
         """
         Ensure user exists in the custom user table.
         """
@@ -427,25 +446,88 @@ class DatabaseOperations:
             if response.data:
                 return response.data[0]
             
-            # Create user if doesn't exist
+            # Create if not
             user_data = {
                 "id": user_id,
                 "email": email,
                 "first_name": first_name,
-                "second_name": second_name
+                "second_name": second_name,
+                "password": password or "SSO_USER"
             }
-            if password:
-                user_data["password"] = password
-                
             response = self.client.table("user").insert(user_data).execute()
-            if response.data:
-                return response.data[0]
-            return None
+            return response.data[0] if response.data else None
         except Exception as e:
-            print(f"Custom user table access error: {str(e)}")
-            return {"id": user_id, "email": email, "first_name": first_name, "second_name": second_name}
+            print(f"Error ensuring user exists: {str(e)}")
+            return None
 
-    def create_user(self, email: str, password: str, first_name: str, second_name: str) -> tuple[Optional[Dict], Optional[str]]:
+    def migrate_transaction_hashes(self, user_id: str) -> Dict:
+        """
+        Utility to re-calculate and update all transaction hashes for a user.
+        Useful when the hash logic changes.
+        """
+        if not self.client:
+            return {"success": 0, "duplicates_removed": 0, "errors": ["No DB connection"]}
+
+        try:
+            # Fetch all transactions for this user
+            response = self.client.table("transactions").select("*").eq("user_id", user_id).execute()
+            transactions_data = response.data
+            
+            if not transactions_data:
+                return {"success": 0, "duplicates_removed": 0, "errors": []}
+
+            updated_count = 0
+            duplicates_removed = 0
+            errors = []
+            
+            # Track hashes we've already processed in this run to detect immediate duplicates
+            processed_hashes = {} # hash -> id
+
+            for trans_data in transactions_data:
+                try:
+                    # Create temporary Transaction object from DB data
+                    from decimal import Decimal
+                    from models.transaction import Transaction
+                    from datetime import datetime
+                    
+                    t = Transaction(
+                        datum=datetime.strptime(trans_data['datum'], '%Y-%m-%d').date() if isinstance(trans_data['datum'], str) else trans_data['datum'],
+                        bedrag=Decimal(str(trans_data['bedrag'])),
+                        naam_tegenpartij=trans_data.get('naam_tegenpartij'),
+                        omschrijving=trans_data.get('omschrijving')
+                    )
+                    new_hash = t.generate_hash()
+
+                    # Check if this hash is already present in this run OR in DB (for other IDs)
+                    if new_hash in processed_hashes:
+                        # This record is a duplicate of one we just processed
+                        self.client.table("transactions").delete().eq("id", trans_data['id']).execute()
+                        duplicates_removed += 1
+                        continue
+                    
+                    # Update DB
+                    update_resp = self.client.table("transactions").update({"hash": new_hash}).eq("id", trans_data['id']).execute()
+                    
+                    if update_resp.data:
+                        updated_count += 1
+                        processed_hashes[new_hash] = trans_data['id']
+                    else:
+                        # Duplicate conflict
+                        self.client.table("transactions").delete().eq("id", trans_data['id']).execute()
+                        duplicates_removed += 1
+
+                except Exception as e:
+                    errors.append(f"Error migrating {trans_data.get('id')}: {str(e)}")
+
+            return {
+                "success": updated_count,
+                "duplicates_removed": duplicates_removed,
+                "errors": errors
+            }
+        except Exception as e:
+            return {"success": 0, "duplicates_removed": 0, "errors": [str(e)]}
+
+    def create_user(self, email: str, password: str, first_name: str, second_name: str) -> Tuple[Optional[Dict], Optional[str]]:
         """
         Create a new user account.
         

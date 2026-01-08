@@ -4,8 +4,9 @@ CSV upload interface with intelligent category suggestion.
 
 import streamlit as st
 from services.csv_parser import CSVParser
-from services.category_suggester import CategorySuggester
+from services.ai_categorizer import AiCategorizer
 from services.categorization import CategorizationEngine
+
 from database.operations import DatabaseOperations
 from views.auth import get_current_user
 from models.category import Category
@@ -62,8 +63,9 @@ def show_upload_page():
         st.session_state['parsed_transactions'] = None
     if 'suggested_categories' not in st.session_state:
         st.session_state['suggested_categories'] = None
-    if 'approved_categories' not in st.session_state:
-        st.session_state['approved_categories'] = {}
+    if 'approved_categories' in st.session_state:
+        st.session_state['temp_approved_categories'] = st.session_state.get('temp_approved_categories', {})
+
     
     # Show appropriate step
     if st.session_state['upload_step'] == 'upload':
@@ -145,87 +147,120 @@ def show_file_upload():
                 preview_df = pd.DataFrame([{
                     'Datum': t.datum,
                     'Bedrag': f"€{t.bedrag:,.2f}",
-                    'Tegenpartij': t.naam_tegenpartij or '-',
-                    'Omschrijving': (t.omschrijving[:50] + '...') if t.omschrijving and len(t.omschrijving) > 50 else (t.omschrijving or '-')
+                    'Tegenpartij': t.naam_tegenpartij or '-'
                 } for t in transactions[:10]])
+
                 
                 st.dataframe(preview_df, use_container_width=True, hide_index=True)
                 
                 if len(transactions) > 10:
                     st.info(f"... en {len(transactions) - 10} meer transacties")
             
-            # Analyze and suggest categories
-            if st.button("➡️ Doorgaan naar Categorie Suggesties", type="primary"):
-                # db_ops initialized above
+            # Analyze and suggest categories using AI agent
+            if st.button("AI Agent: Analyseer Transacties 🤖", type="primary"):
                 user_categories = db_ops.get_categories(user.id)
+                ai_categorizer = AiCategorizer()
                 
-                suggester = CategorySuggester(user_categories=user_categories)
-                suggested_cats, processed_txns = suggester.analyze_and_suggest(transactions)
+                with st.spinner("De AI agent analyseert je transacties..."):
+                    # The AI categorizer processes batches and enriches transactions
+                    processed_txns = ai_categorizer.analyze_batch(transactions)
                 
+                # We still want to group for the suggest_categories view or show individual?
+                # The existing view shows category "cards". We'll adapt it.
                 st.session_state['parsed_transactions'] = processed_txns
-                st.session_state['suggested_categories'] = suggested_cats
                 st.session_state['upload_step'] = 'review_categories'
                 st.rerun()
 
+
 def show_category_review():
-    """Step 2: Review and approve suggested categories."""
+    """Step 2: Review and approve AI suggested categories."""
     
-    st.subheader("🏷️ Voorgestelde Categorieën")
-    st.markdown("Gebaseerd op je transacties, stel ik de volgende categorieën voor. Kies welke je wilt gebruiken:")
+    st.subheader("🤖 AI Analyse Resultaten")
+    st.markdown("De AI agent heeft je transacties geanalyseerd. Hieronder zie je de voorgestelde categorisatie:")
     
-    suggested_cats = st.session_state['suggested_categories']
-    
-    if not suggested_cats:
-        st.error("Geen categorieën gevonden")
+    transactions = st.session_state['parsed_transactions']
+    if not transactions:
+        st.error("Geen transacties gevonden om te beoordelen")
         return
-    
-    # Initialize approved categories in session state if not exists
-    if 'temp_approved_categories' not in st.session_state:
-        st.session_state['temp_approved_categories'] = {}
-    
-    # Show category cards with checkboxes
-    st.markdown("---")
-    
-    for cat_name, cat_data in suggested_cats.items():
-        col1, col2 = st.columns([1, 4])
-        
-        with col1:
-            # Color preview
-            st.markdown(f"""
-                <div style="background-color: {cat_data['color']}; 
-                            width: 60px; 
-                            height: 60px; 
-                            border-radius: 10px;
-                            margin: 10px;">
-                </div>
-            """, unsafe_allow_html=True)
-        
-        with col2:
-            # Category checkbox and details
-            is_approved = st.checkbox(
-                f"**{cat_name}**",
-                value=True,
-                key=f"cat_{cat_name}"
-            )
+
+    # Group transactions by category for summary view
+    cat_summary = {}
+    for t in transactions:
+        cat = t.categorie or "Overig"
+        if cat not in cat_summary:
+            cat_summary[cat] = {
+                "count": 0,
+                "total": 0,
+                "confidence_avg": 0,
+                "examples": []
+            }
+        cat_summary[cat]["count"] += 1
+        cat_summary[cat]["total"] += float(t.bedrag)
+        cat_summary[cat]["confidence_avg"] += (t.ai_confidence or 0.5)
+        if len(cat_summary[cat]["examples"]) < 3:
+            cat_summary[cat]["examples"].append(t.naam_tegenpartij)
+
+    # Display summary cards
+    for cat_name, data in cat_summary.items():
+        avg_conf = data["confidence_avg"] / data["count"]
+        with st.expander(f"**{cat_name}** ({data['count']} transacties | €{data['total']:,.2f})", expanded=avg_conf < 0.8):
+            st.write(f"**Gemiddelde betrouwbaarheid:** {avg_conf:.1%}")
+            st.write(f"**Voorbeelden:** {', '.join(data['examples'])}")
             
-            # Show reasons why this was suggested
-            if cat_data.get('reasons'):
-                reasons_text = ", ".join(cat_data['reasons'])
-                st.markdown(f"**Waarom?** *{reasons_text}*")
-            
-            st.caption(cat_data.get('description', ''))
-            
-            if cat_data['transaction_count'] > 0:
-                st.caption(f"📊 {cat_data['transaction_count']} transacties | "
-                          f"💶 Totaal: €{cat_data['avg_amount'] * cat_data['transaction_count']:,.2f}")
-            
-            # Show counterparties
-            if cat_data.get('counterparties'):
-                counterparties = sorted(cat_data['counterparties'])[:5]
-                if counterparties:
-                    st.caption(f"🏪 Gevonden bij: {', '.join(counterparties)}")
+            # Show a few transactions with reasoning
+            sub_tx = [t for t in transactions if t.categorie == cat_name][:5]
+            for t in sub_tx:
+                st.caption(f"📝 {t.naam_tegenpartij}: {t.ai_reasoning} (Vertrouwen: {t.ai_confidence:.0%})")
+
         
         st.markdown("---")
+    
+    # Detailed Table View
+    with st.expander("🔍 Gedetailleerd Overzicht (Alle Transacties)", expanded=False):
+        df_details = pd.DataFrame([{
+            "Datum": t.datum,
+            "Tegenpartij": t.naam_tegenpartij,
+            "Bedrag": float(t.bedrag),
+            "Categorie": t.categorie,
+            "AI Naam": t.ai_name,
+            "AI Motivatie": t.ai_reasoning,
+            "Vertrouwen": t.ai_confidence,
+            "Omschrijving": t.omschrijving
+        } for t in transactions])
+        
+        # We allow editing categories here too
+        db_ops = DatabaseOperations()
+        user_categories = db_ops.get_categories(get_current_user().id)
+        db_category_names = sorted([c['name'] for c in user_categories])
+        if "Overig" not in db_category_names:
+            db_category_names.append("Overig")
+            
+        edited_df = st.data_editor(
+            df_details,
+            column_config={
+                "Datum": st.column_config.DateColumn("Datum", disabled=True),
+                "Tegenpartij": st.column_config.TextColumn("Tegenpartij"),
+                "Bedrag": st.column_config.NumberColumn("Bedrag", format="€ %.2f", disabled=True),
+                "Categorie": st.column_config.SelectboxColumn("Categorie", options=db_category_names, required=True),
+                "AI Naam": st.column_config.TextColumn("🤖 AI Naam", disabled=True),
+                "AI Motivatie": st.column_config.TextColumn("🤖 Motivatie", disabled=True),
+                "Vertrouwen": st.column_config.ProgressColumn("🤖 Vertrouwen", format="%.0f%%", min_value=0, max_value=1),
+                "Omschrijving": None # Hide description
+            },
+
+            hide_index=True,
+            use_container_width=True,
+            key="upload_details_editor"
+        )
+        
+        # Update session state if edited
+        if st.checkbox("Wijzigingen in tabel toepassen"):
+            for i, row in edited_df.iterrows():
+                transactions[i].categorie = row["Categorie"]
+                transactions[i].naam_tegenpartij = row["Tegenpartij"]
+            st.session_state['parsed_transactions'] = transactions
+            st.success("Wijzigingen opgeslagen!")
+
     
     # Show custom categories if any
     if st.session_state['temp_approved_categories']:
@@ -283,39 +318,18 @@ def show_category_review():
                     st.rerun()
     
     # Navigation buttons
-    col1, col2, col3 = st.columns(3)
+    col1, col2 = st.columns(2)
     
     with col1:
         if st.button("⬅️ Terug", use_container_width=True):
             st.session_state['upload_step'] = 'upload'
-            st.session_state.pop('temp_approved_categories', None)
             st.rerun()
     
     with col2:
-        if st.button("🔄 Reset", use_container_width=True):
-            st.session_state.clear()
+        if st.button("✅ Alles Akkoord & Doorgaan", type="primary", use_container_width=True):
+            st.session_state['upload_step'] = 'import'
             st.rerun()
-    
-    with col3:
-        if st.button("✅ Akkoord & Doorgaan", type="primary", use_container_width=True):
-            # Collect all approved categories
-            approved = {}
-            
-            # Add checked suggested categories
-            for cat_name, cat_data in suggested_cats.items():
-                if st.session_state.get(f"cat_{cat_name}", True):  # Default checked
-                    approved[cat_name] = cat_data
-            
-            # Add custom categories
-            approved.update(st.session_state.get('temp_approved_categories', {}))
-            
-            if not approved:
-                st.error("Selecteer minstens één categorie")
-            else:
-                st.session_state['approved_categories'] = approved
-                st.session_state['upload_step'] = 'import'
-                st.session_state.pop('temp_approved_categories', None)
-                st.rerun()
+
 
 
 def show_import_confirmation():
@@ -327,16 +341,19 @@ def show_import_confirmation():
         return
     
     transactions = st.session_state['parsed_transactions']
-    approved_cats = st.session_state['approved_categories']
     
     st.subheader("💾 Importeren")
-    st.info(f"Klaar om {len(transactions)} transacties te importeren met {len(approved_cats)} categorieën")
+    st.info(f"Klaar om {len(transactions)} transacties te importeren met AI-verrijkte data.")
+
     
     # Show summary
     with st.expander("📊 Samenvatting", expanded=True):
-        st.write("**Goedgekeurde Categorieën:**")
-        for cat_name in approved_cats.keys():
-            st.write(f"• {cat_name}")
+        st.write(f"**Aantal transacties:** {len(transactions)}")
+        # Count high vs low confidence
+        high_conf = len([t for t in transactions if (t.ai_confidence or 0) >= 0.8])
+        st.write(f"✅ Hoge betrouwbaarheid: {high_conf}")
+        st.write(f"⚠️ Lage betrouwbaarheid: {len(transactions) - high_conf}")
+
     
     col1, col2 = st.columns(2)
     
@@ -347,10 +364,10 @@ def show_import_confirmation():
     
     with col2:
         if st.button("🚀 Importeren!", type="primary", use_container_width=True):
-            perform_import(transactions, approved_cats, user.id)
+            perform_import(transactions, user.id)
 
-def perform_import(transactions, approved_categories, user_id):
-    """Perform the actual import with approved categories."""
+def perform_import(transactions, user_id):
+    """Perform the actual import with AI metadata."""
     
     db_ops = DatabaseOperations()
     
@@ -363,8 +380,9 @@ def perform_import(transactions, approved_categories, user_id):
         overig_id = db_ops.create_category(overig_cat, user_id)
         cat_name_to_id["Overig"] = overig_id
         
-        # Create approved categories in database
-        for cat_name, cat_data in approved_categories.items():
+        # Create custom categories from session state in database
+        temp_cats = st.session_state.get('temp_approved_categories', {})
+        for cat_name, cat_data in temp_cats.items():
             if cat_name == "Overig": continue
             
             # Translate keywords to rules
@@ -395,16 +413,24 @@ def perform_import(transactions, approved_categories, user_id):
                 pass
     
     with st.spinner("Transacties worden geïmporteerd..."):
-        # Link transactions to category IDs
-        approved_names = set(approved_categories.keys())
+        # Get existing categories to map IDs
+        db_categories = db_ops.get_categories(user_id)
+        cat_map = {cat['name']: cat['id'] for cat in db_categories}
+        
+        # Ensure "Overig" exists
+        if "Overig" not in cat_map:
+            overig_cat = Category(name="Overig", color="#9ca3af", rules=[])
+            overig_id = db_ops.create_category(overig_cat, user_id)
+            cat_map["Overig"] = overig_id
+        
+        overig_id = cat_map["Overig"]
+
+        # Link transactions to category IDs based on AI or rule results
         for t in transactions:
-            # Determine correct name first (fallback to Overig)
-            final_cat_name = t.categorie if t.categorie in approved_names else "Overig"
-            
-            # Assign ID from our map
-            t.categorie_id = cat_name_to_id.get(final_cat_name, overig_id)
+            t.categorie_id = cat_map.get(t.categorie, overig_id)
                 
         result = db_ops.insert_transactions(transactions, user_id)
+
         
         # Show results
         st.success(f"✅ {result['success']} transacties succesvol geïmporteerd")

@@ -118,6 +118,14 @@ def show_settings_page():
                 user.id,
                 {"investment_goal_percentage": investment_goal}
             )
+            
+            # Also update the "Investeren" category percentage to match
+            if success:
+                categories = db_ops.get_categories(user.id)
+                investeren_cat = next((cat for cat in categories if cat['name'] == "Investeren"), None)
+                if investeren_cat:
+                    db_ops.update_category_percentage(investeren_cat['id'], int(investment_goal), user.id)
+            
             if success:
                 st.success("✅ Voorkeuren opgeslagen!")
                 st.rerun()

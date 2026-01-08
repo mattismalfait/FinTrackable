@@ -14,6 +14,10 @@ load_dotenv()
 SUPABASE_URL = os.getenv("SUPABASE_URL", "")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY", "")
 
+# AI Configuration
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", os.getenv("GOOGLE_API_KEY", ""))
+
+
 # Application Settings
 APP_NAME = os.getenv("APP_NAME", "FinTrackable")
 DEFAULT_INVESTMENT_GOAL = float(os.getenv("DEFAULT_INVESTMENT_GOAL", "20"))
