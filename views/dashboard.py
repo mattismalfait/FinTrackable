@@ -59,18 +59,75 @@ def show_dashboard():
     analytics_global = Analytics(dashboard_transactions)
     min_date, max_date = analytics_global.get_date_range()
 
+    # --- TOP FILTER BAR (COMPACT) ---
+    
+    # Create a compact row for controls
+    f_col1, f_col2, f_col3, f_col4 = st.columns([2, 1.5, 1.5, 4])
+    
+    with f_col1:
+        view_mode = st.selectbox("Weergave", ["Maand", "Jaar", "Aangepast"], label_visibility="collapsed")
+        
+    start_date, end_date = min_date or date.today(), max_date or date.today()
+    
+    # Helper for years
+    available_years = sorted(list(set(range(min_date.year, max_date.year + 1)))) if min_date and max_date else [date.today().year]
+    if not available_years: available_years = [date.today().year]
+    
+    if view_mode == "Maand":
+        with f_col2:
+            selected_year = st.selectbox("Jaar", available_years, index=len(available_years)-1, label_visibility="collapsed", key="sel_year_month_mode")
+        with f_col3:
+            month_names = {1: "Januari", 2: "Februari", 3: "Maart", 4: "April", 5: "Mei", 6: "Juni", 
+                          7: "Juli", 8: "Augustus", 9: "September", 10: "Oktober", 11: "November", 12: "December"}
+            today = date.today()
+            default_month = today.month if selected_year == today.year else 1
+            selected_month_name = st.selectbox("Maand", list(month_names.values()), index=default_month-1, label_visibility="collapsed")
+            selected_month = list(month_names.keys())[list(month_names.values()).index(selected_month_name)]
+            
+        import calendar
+        start_date = date(selected_year, selected_month, 1)
+        last_day = calendar.monthrange(selected_year, selected_month)[1]
+        end_date = date(selected_year, selected_month, last_day)
+        
+    elif view_mode == "Jaar":
+        with f_col2:
+            selected_year = st.selectbox("Jaar", available_years, index=len(available_years)-1, label_visibility="collapsed", key="sel_year_year_mode")
+            
+        start_date = date(selected_year, 1, 1)
+        end_date = date(selected_year, 12, 31)
+        
+    else: # Aangepast
+        with f_col2:
+             # Span across col 2 and 3 fordate input to have space
+             pass
+        with f_col2: # Actually put it in col 2 but maybe wider? 
+             # Re-doing columns for this mode might be tricky if we want exact alignment, 
+             # but let's try to put it in col2 and make col2 wider in the definitions if needed.
+             # Or just use a different layout for custom.
+             # Let's keep simpler:
+             try:
+                date_range = st.date_input(
+                    "Bereik",
+                    value=(min_date, max_date) if min_date and max_date else (date.today(), date.today()),
+                    min_value=min_date if min_date else date.today(),
+                    max_value=max_date if max_date else date.today(),
+                    label_visibility="collapsed"
+                )
+                if len(date_range) == 2:
+                    start_date, end_date = date_range
+                elif len(date_range) == 1:
+                    start_date = end_date = date_range[0]
+             except:
+                start_date, end_date = date.today(), date.today()
+    
+    date_range = (start_date, end_date)
+    st.divider()
+
     # Sidebar filters
     with st.sidebar:
         st.header("🔍 Filters")
         
-        # Date range filter
-        st.subheader("Datum Bereik")
-        date_range = st.date_input(
-            "Selecteer periode",
-            value=(min_date, max_date) if min_date and max_date else (date.today(), date.today()),
-            min_value=min_date if min_date else date.today(),
-            max_value=max_date if max_date else date.today()
-        )
+        # Date range removed from here
         
         # Category filter
         st.subheader("Selecteer Categorieën")
@@ -139,7 +196,16 @@ def show_dashboard():
     if len(selected_categories) != len(all_categories):
         current_analytics.filter_by_categories(selected_categories)
 
-    # Key Metrics Row
+    # Period Label Calculation
+    period_label = "Geselecteerde Periode"
+    if 'view_mode' in locals():
+        if view_mode == "Maand" and start_date:
+            month_names_nl = ["Januari", "Februari", "Maart", "April", "Mei", "Juni", "Juli", "Augustus", "September", "Oktober", "November", "December"]
+            period_label = f"{month_names_nl[start_date.month-1]} {start_date.year}"
+        elif view_mode == "Jaar" and start_date:
+            period_label = f"{start_date.year}"
+
+    # Metric Row
     metrics_template = load_template("components/metrics.html")
     net_bal = current_analytics.get_net_balance()
     st.markdown(metrics_template.format(
@@ -151,7 +217,7 @@ def show_dashboard():
     ), unsafe_allow_html=True)
     
     # Budget Comparison
-    show_budget_comparison(current_analytics, user_categories, user.id, db_ops, float(investment_goal))
+    show_budget_comparison(current_analytics, user_categories, user.id, db_ops, float(investment_goal), period_label)
     
     st.divider()
     
@@ -252,16 +318,15 @@ def show_trends_tab(analytics: Analytics, cat_engine: CategorizationEngine):
     else:
         st.info("Geen categorieën om weer te geven")
 
-def show_budget_comparison(analytics: Analytics, categories: list[dict], user_id: str, db_ops: DatabaseOperations, investment_goal: float):
+def show_budget_comparison(analytics: Analytics, categories: list[dict], user_id: str, db_ops: DatabaseOperations, investment_goal: float, period_label: str = ""):
     """Render the budget vs actual table."""
     st.subheader("🗓️ Budget Planning & Realisatie")
     
     total_income = analytics.get_total_income()
-    month_name = datetime.now().strftime('%b')
     
     st.markdown(dedent(f"""
         <div style="background-color: #f8fafc; padding: 15px; border-radius: 10px; border-left: 5px solid #3b82f6; margin-bottom: 20px;">
-            <h4 style="margin:0; color: #64748b;">Totaal Inkomen {month_name}: <span style="color: #0f172a;">€{total_income:,.2f}</span></h4>
+            <h4 style="margin:0; color: #64748b;">Totaal Inkomen ({period_label}): <span style="color: #0f172a;">€{total_income:,.2f}</span></h4>
         </div>
     """), unsafe_allow_html=True)
 
@@ -276,7 +341,7 @@ def show_budget_comparison(analytics: Analytics, categories: list[dict], user_id
     
     for cat in categories:
         cat_name = str(cat['name']).strip()
-        if cat_name == "Inkomen": continue
+        if cat_name == "Inkomen" or cat_name == "Overig": continue
         
         pct = cat.get('percentage', 0) or 0
         if pct == 0 and cat_name == "Overig": continue

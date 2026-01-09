@@ -35,14 +35,14 @@ def create_monthly_trend_chart(monthly_by_category: pd.DataFrame, category_color
         fig.add_trace(go.Bar(
             name=category,
             x=pivot_df.index,
-            y=pivot_df[category].abs(),  # Use absolute values for expenses
+            y=pivot_df[category],  # Allow negative values to plot downwards
             marker_color=category_colors.get(category, '#9ca3af'),
             hovertemplate='<b>%{fullData.name}</b><br>€%{y:,.2f}<extra></extra>'
         ))
     
     fig.update_layout(
         title="Maandelijkse Trends per Categorie",
-        barmode='stack',
+        barmode='relative', # Positive up, negative down
         xaxis_title="Maand",
         yaxis_title="Bedrag (€)",
         hovermode='x unified',
@@ -86,7 +86,7 @@ def create_income_expense_chart(monthly_totals: pd.DataFrame) -> go.Figure:
     fig.add_trace(go.Bar(
         name='Uitgaven',
         x=monthly_totals['month'],
-        y=monthly_totals['expenses'],
+        y=-monthly_totals['expenses'], # Negate to show below x-axis
         marker_color=THEME_COLORS['expense'],
         hovertemplate='<b>Uitgaven</b><br>€%{y:,.2f}<extra></extra>'
     ))
@@ -240,7 +240,7 @@ def create_year_comparison(yearly_data: Dict[int, Dict[str, float]]) -> go.Figur
     fig.add_trace(go.Bar(
         name='Uitgaven',
         x=years,
-        y=expense_values,
+        y=[-x for x in expense_values], # Negate to show below x-axis
         marker_color=THEME_COLORS['expense'],
         hovertemplate='<b>Uitgaven</b><br>€%{y:,.2f}<extra></extra>'
     ))

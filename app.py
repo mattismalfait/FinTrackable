@@ -65,6 +65,16 @@ def show_main_app():
             key="navigation"
         )
         
+        # Determine if page changed to trigger specific reloads
+        if "last_page" not in st.session_state:
+            st.session_state.last_page = page
+            
+        if st.session_state.last_page != page:
+            if page == "🏷️ Categorieën":
+                st.session_state.hist_reload_needed = True
+                st.session_state.pending_trans_reload = True
+            st.session_state.last_page = page
+        
         st.markdown("---")
         
         # Logout button

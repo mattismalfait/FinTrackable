@@ -1,7 +1,5 @@
 # 🏦 FinTrackable
 
-TypeError: Failed to fetch dynamically imported module: https://fintrackable.onrender.com/static/js/index.CV56Xzvw.js
-
 **Financiële Administratie Geautomatiseerd**
 
 Een volledige, productie-klare financiële administratie-applicatie die KBC banktransacties automatisch verwerkt, categoriseert en visualiseert. Vervang je manuele Excel-administratie door een geautomatiseerde oplossing met een gebruiksvriendelijke Streamlit-interface.

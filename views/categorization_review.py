@@ -65,8 +65,11 @@ def handle_pending_change(user_id: str, db_ops: DatabaseOperations):
     if cat_f and cat_f != "Alle Categorieën":
         filtered_df = filtered_df[filtered_df['Categorie'] == cat_f]
 
-    # We need categories for ID lookup
-    user_categories = db_ops.get_categories(user_id)
+    # We need categories for ID lookup - Cache aware
+    if 'user_categories_cache' not in st.session_state:
+         st.session_state.user_categories_cache = db_ops.get_categories(user_id)
+    user_categories = st.session_state.user_categories_cache
+    
     cat_name_to_id = {c['name']: c['id'] for c in user_categories}
     
     for pos_str, changes in edits.items():
@@ -96,10 +99,36 @@ def handle_pending_change(user_id: str, db_ops: DatabaseOperations):
                         if other_pos_str not in edits: edits[other_pos_str] = {}
                         edits[other_pos_str]["Categorie"] = new_cat_name
 
+        # Batch Lopende (Current Account) Logic
+        if "Lopende" in changes:
+            new_val = bool(changes["Lopende"])
+            is_selected = edits.get(pos_str, {}).get("Select", current_row["Select"])
+            
+            if is_selected:
+                # Iterate filtered_df to find other selected rows for visual update
+                for other_pos, (other_idx, row) in enumerate(filtered_df.iterrows()):
+                    other_pos_str = str(other_pos)
+                    other_sel = edits.get(other_pos_str, {}).get("Select", row["Select"])
+                    
+                    if other_sel and other_idx != idx:
+                         db_ops.update_transaction(row['id'], {"is_lopende_rekening": new_val}, user_id)
+                         # Update session state DF immediately for optimistic UI
+                         df.at[other_idx, 'Lopende'] = new_val
+                         
+                         if other_pos_str not in edits: edits[other_pos_str] = {}
+                         edits[other_pos_str]["Lopende"] = new_val
+
         # Prepare main row update
         cat_val = changes.get("Categorie", current_row["Categorie"])
         c_id = cat_name_to_id.get(cat_val)
         
+        # Update session state DF immediately
+        if "Categorie" in changes: df.at[idx, "Categorie"] = cat_val
+        if "Lopende" in changes: df.at[idx, "Lopende"] = bool(changes["Lopende"])
+        if "Tegenpartij" in changes: df.at[idx, "Tegenpartij"] = str(changes["Tegenpartij"])
+        if "Omschrijving" in changes: df.at[idx, "Omschrijving"] = str(changes["Omschrijving"])
+        if "Bedrag" in changes: df.at[idx, "Bedrag"] = float(changes["Bedrag"])
+
         updates = {
             "datum": changes.get("Datum", current_row["Datum"]).isoformat() if hasattr(changes.get("Datum", current_row["Datum"]), "isoformat") else str(changes.get("Datum", current_row["Datum"])),
             "bedrag": float(changes.get("Bedrag", current_row["Bedrag"])),
@@ -114,6 +143,49 @@ def handle_pending_change(user_id: str, db_ops: DatabaseOperations):
 def show_pending_review(user_id: str, db_ops: DatabaseOperations):
     """Show pending (unconfirmed) transactions review interface."""
     
+    # Check for suggested categories
+    if 'new_ai_cats' in st.session_state and st.session_state['new_ai_cats']:
+        with st.expander("💡 AI Suggereert Nieuwe Categorieën", expanded=True):
+            st.write("De AI heeft transacties gevonden die niet passen in je huidige categorieën.")
+            
+            cats_to_remove = []
+            for i, new_cat in enumerate(st.session_state['new_ai_cats']):
+                c1, c2, c3 = st.columns([2, 1, 1])
+                with c1:
+                    st.write(f"**{new_cat}**")
+                with c2:
+                    color = st.color_picker("Kleur", "#3b82f6", key=f"new_ai_c_{i}")
+                with c3:
+                    if st.button("Aanmaken & Toepassen", key=f"btn_create_ai_{i}"):
+                        # Create category
+                        from models.category import Category
+                        cat_obj = Category(name=new_cat, color=color, rules=[
+                            {"field": "ai_category", "contains": [new_cat]} # Dummy rule tracking
+                        ])
+                        new_id = db_ops.create_category(cat_obj, user_id)
+                        
+                        if new_id:
+                            # Update all transactions that have this ai_category
+                            if db_ops.client:
+                                db_ops.client.table("transactions").update({
+                                    "categorie_id": new_id
+                                }).eq("user_id", user_id).eq("ai_category", new_cat).execute()
+                            
+                            st.success(f"Categorie '{new_cat}' aangemaakt en toegepast!")
+                            cats_to_remove.append(new_cat)
+                            st.session_state.pending_trans_reload = True
+                        else:
+                            st.error("Kon categorie niet aanmaken.")
+            
+            if cats_to_remove:
+                for c in cats_to_remove:
+                    st.session_state['new_ai_cats'].remove(c)
+                st.rerun()
+
+            if st.button("Negeer suggesties", type="secondary"):
+                del st.session_state['new_ai_cats']
+                st.rerun()
+                
     st.subheader("Onbevestigde Transacties")
     
     # Initialize reload flag
@@ -124,8 +196,12 @@ def show_pending_review(user_id: str, db_ops: DatabaseOperations):
     if 'pending_trans_df' not in st.session_state or st.session_state.pending_trans_reload:
         transactions = db_ops.get_transactions(user_id, is_confirmed=False)
         
-        # Get category list and mapping
-        user_categories = db_ops.get_categories(user_id)
+        # Get category list and mapping - CACHED
+        if 'user_categories_cache' not in st.session_state or st.session_state.pending_trans_reload:
+             st.session_state.user_categories_cache = db_ops.get_categories(user_id)
+        
+        user_categories = st.session_state.user_categories_cache
+        
         # STRICTLY use DB categories
         db_category_names = sorted([c['name'] for c in user_categories])
         if "Overig" not in db_category_names:
@@ -165,8 +241,13 @@ def show_pending_review(user_id: str, db_ops: DatabaseOperations):
         if 'editor_pending' in st.session_state:
             del st.session_state.editor_pending
 
-    # Helpers for Dropdown (need to get these even if cached, but they are fast)
-    user_categories = db_ops.get_categories(user_id)
+    # Helpers for Dropdown (Use Cache)
+    user_categories = st.session_state.get('user_categories_cache', [])
+    # Fallback if cache missing (shouldn't happen if logic above is correct, but safety first)
+    if not user_categories:
+        user_categories = db_ops.get_categories(user_id)
+        st.session_state.user_categories_cache = user_categories
+
     cat_name_to_id = {c['name']: c['id'] for c in user_categories}
     cat_engine = CategorizationEngine(user_categories)
     db_category_names = sorted([c['name'] for c in user_categories])
@@ -220,6 +301,7 @@ def show_pending_review(user_id: str, db_ops: DatabaseOperations):
                     if db_ops.create_category(new_cat_obj, user_id):
                         st.success(f"Categorie '{new_cat_quick}' toegevoegd!")
                         st.session_state.pending_trans_reload = True # Reload to update dropdowns
+                        if 'user_categories_cache' in st.session_state: del st.session_state.user_categories_cache # Invalidate cache
                         st.rerun()
                     else:
                         st.error("Kon categorie niet aanmaken")
@@ -290,32 +372,56 @@ def show_pending_review(user_id: str, db_ops: DatabaseOperations):
                                 datum=r['Datum'],
                                 bedrag=Decimal(str(r['Bedrag'])),
                                 naam_tegenpartij=r['Tegenpartij'],
-                                omschrijving=r['Omschrijving']
+                                omschrijving=r['Omschrijving'],
+                                categorie=r['Categorie']
                             )
                             tx_objs.append(tx)
                         
                         optimized_txs = ai_categorizer.analyze_batch(tx_objs)
                         
-                        if not any(t.ai_reasoning for t in optimized_txs):
-                            st.warning("⚠️ Geen AI details gevonden. Controleer of de API key correct is ingesteld in het .env bestand.")
+                        if not any(t.ai_category for t in optimized_txs):
+                            st.warning("⚠️ Geen AI details gevonden.")
                             return
 
                         # Update DB
+                        # Logic: 
+                        # 1. If AI suggests KNOWN category -> Update ID immediately
+                        # 2. If AI suggests UNKNOWN category -> Update metadata (ai_category) but keep current category_id
+                        
                         user_categories = db_ops.get_categories(user_id)
                         cat_name_to_id = {c['name']: c['id'] for c in user_categories}
+                        new_cats_found = set()
                         
                         for tx in optimized_txs:
-                            c_id = cat_name_to_id.get(tx.categorie)
+                            c_id = None
+                            # Check if AI suggestion exists in DB
+                            if tx.ai_category and tx.ai_category in cat_name_to_id:
+                                # Safe to update category
+                                if tx.categorie == tx.ai_category: # Only if our logic accepted it (confidence > 0.5)
+                                    c_id = cat_name_to_id.get(tx.categorie)
+                            elif tx.ai_category and tx.ai_confidence > 0.5:
+                                # New valid suggestion?
+                                new_cats_found.add(tx.ai_category)
+
                             updates = {
                                 "naam_tegenpartij": tx.naam_tegenpartij,
-                                "categorie_id": c_id,
                                 "ai_name": tx.ai_name,
                                 "ai_reasoning": tx.ai_reasoning,
-                                "ai_confidence": tx.ai_confidence
+                                "ai_confidence": tx.ai_confidence,
+                                "ai_category": tx.ai_category
                             }
+                            if c_id:
+                                updates["categorie_id"] = c_id
+                                
                             db_ops.update_transaction(tx.id, updates, user_id)
                         
+                        if new_cats_found:
+                            st.session_state['new_ai_cats'] = list(new_cats_found)
+                        
                         st.success(f"✅ {len(optimized_txs)} geoptimaliseerd!")
+                        if new_cats_found:
+                             st.info(f"💡 AI suggereert nieuwe categorieën: {', '.join(new_cats_found)}")
+                        
                         st.session_state.pending_trans_reload = True
                         st.rerun()
 
@@ -395,8 +501,11 @@ def handle_history_change(user_id: str, db_ops: DatabaseOperations):
         )
         df_filtered = df_filtered[mask]
 
-    # We need categories for ID lookup
-    user_categories = db_ops.get_categories(user_id)
+    # We need categories for ID lookup - Cache aware
+    if 'user_categories_cache' not in st.session_state:
+         st.session_state.user_categories_cache = db_ops.get_categories(user_id)
+    user_categories = st.session_state.user_categories_cache
+    
     cat_name_to_id = {c['name']: c['id'] for c in user_categories}
     
     for pos_str, changes in edits.items():
@@ -425,9 +534,35 @@ def handle_history_change(user_id: str, db_ops: DatabaseOperations):
                         if other_pos_str not in edits: edits[other_pos_str] = {}
                         edits[other_pos_str]["Categorie"] = new_cat_name
 
+        # Batch Lopende (Current Account) Logic
+        if "Lopende" in changes:
+            new_val = bool(changes["Lopende"])
+            is_selected = edits.get(pos_str, {}).get("Select", current_row["Select"])
+            
+            if is_selected:
+                # Iterate df_filtered to find other selected rows for visual update
+                for other_pos, (other_idx, row) in enumerate(df_filtered.iterrows()):
+                    other_pos_str = str(other_pos)
+                    other_sel = edits.get(other_pos_str, {}).get("Select", row["Select"])
+                    
+                    if other_sel and other_idx != idx:
+                         db_ops.update_transaction(row['id'], {"is_lopende_rekening": new_val}, user_id)
+                         # Update session state DF immediately
+                         df.at[other_idx, 'Lopende'] = new_val
+                         
+                         if other_pos_str not in edits: edits[other_pos_str] = {}
+                         edits[other_pos_str]["Lopende"] = new_val
+
         # Prepare main row update
         cat_val = changes.get("Categorie", current_row["Categorie"])
         c_id = cat_name_to_id.get(cat_val)
+
+        # Update session state DF immediately
+        if "Categorie" in changes: df.at[idx, "Categorie"] = cat_val
+        if "Lopende" in changes: df.at[idx, "Lopende"] = bool(changes["Lopende"])
+        if "Tegenpartij" in changes: df.at[idx, "Tegenpartij"] = str(changes["Tegenpartij"])
+        if "Omschrijving" in changes: df.at[idx, "Omschrijving"] = str(changes["Omschrijving"])
+        if "Bedrag" in changes: df.at[idx, "Bedrag"] = float(changes["Bedrag"])
         
         updates = {
             "datum": changes.get("Datum", current_row["Datum"]).isoformat() if hasattr(changes.get("Datum", current_row["Datum"]), "isoformat") else str(changes.get("Datum", current_row["Datum"])),
@@ -449,7 +584,11 @@ def show_confirmed_history(user_id: str, db_ops: DatabaseOperations):
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        user_categories = db_ops.get_categories(user_id)
+        # Use Cache for History too
+        if 'user_categories_cache' not in st.session_state:
+             st.session_state.user_categories_cache = db_ops.get_categories(user_id)
+        user_categories = st.session_state.user_categories_cache
+
         db_valid_cats = sorted([c['name'] for c in user_categories])
         if "Overig" not in db_valid_cats: db_valid_cats.append("Overig")
         all_cats = ["Alle"] + db_valid_cats
@@ -559,7 +698,8 @@ def show_confirmed_history(user_id: str, db_ops: DatabaseOperations):
                     ai_categorizer.set_categories(user_categories)
                     
                     tx_objs = [Transaction(id=r['id'], datum=r['Datum'], bedrag=Decimal(str(r['Bedrag'])), 
-                                          naam_tegenpartij=r['Tegenpartij'], omschrijving=r.get('Omschrijving', '')) 
+                                          naam_tegenpartij=r['Tegenpartij'], omschrijving=r.get('Omschrijving', ''),
+                                          categorie=r['Categorie']) 
                               for _, r in selected_rows.iterrows()]
                     
                     cat_name_to_id = {c['name']: c['id'] for c in user_categories}
@@ -570,8 +710,29 @@ def show_confirmed_history(user_id: str, db_ops: DatabaseOperations):
                         return
                     
                     for tx in optimized_txs:
-                        updates = {"naam_tegenpartij": tx.naam_tegenpartij, "categorie_id": cat_name_to_id.get(tx.categorie),
-                                  "ai_name": tx.ai_name, "ai_reasoning": tx.ai_reasoning, "ai_confidence": tx.ai_confidence}
+                        # Determine category ID - use AI suggestion if confident, else keep existing
+                        new_cat_id = None
+                        if tx.ai_category and tx.ai_confidence > 0.5:
+                             # Try to match AI category to DB
+                             matched_db_cat = cat_name_to_id.get(tx.ai_category)
+                             if matched_db_cat:
+                                 new_cat_id = matched_db_cat
+                             else:
+                                 # AI suggests a category we don't have yet. 
+                                 # For now, we only update metadata, or we could fallback to 'Overig' if we wanted.
+                                 pass
+                        
+                        updates = {
+                            "naam_tegenpartij": tx.naam_tegenpartij, 
+                            "ai_name": tx.ai_name, 
+                            "ai_reasoning": tx.ai_reasoning, 
+                            "ai_confidence": tx.ai_confidence,
+                            "ai_category": tx.ai_category
+                        }
+                        
+                        if new_cat_id:
+                            updates["categorie_id"] = new_cat_id
+                            
                         db_ops.update_transaction(tx.id, updates, user_id)
                     
                     st.success("✅ Historiek geoptimaliseerd!")

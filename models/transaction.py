@@ -27,6 +27,7 @@ class Transaction(BaseModel):
     ai_name: Optional[str] = None
     ai_reasoning: Optional[str] = None
     ai_confidence: Optional[float] = None
+    ai_category: Optional[str] = None
 
     
     class Config:
@@ -58,7 +59,8 @@ class Transaction(BaseModel):
             "hash": self.hash or self.generate_hash(),
             "ai_name": self.ai_name,
             "ai_reasoning": self.ai_reasoning,
-            "ai_confidence": self.ai_confidence
+            "ai_confidence": self.ai_confidence,
+            "ai_category": self.ai_category
         }
 
     

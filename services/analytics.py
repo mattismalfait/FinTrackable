@@ -51,21 +51,34 @@ class Analytics:
 
     @lru_cache(maxsize=1)
     def get_total_income(self) -> float:
-        """Get total income (positive transactions)."""
+        """
+        Get total income. 
+        Strictly defined as the net sum of transactions in the 'Inkomen' category.
+        """
         if self.df.empty:
             return 0.0
-        return float(self._positive_transactions['bedrag'].sum())
+        
+        # Filter strictly for 'Inkomen'
+        # We assume category names are normalized/stripped in __init__
+        income_val = self.df[self.df['categorie'] == 'Inkomen']['bedrag'].sum()
+        return float(income_val)
     
     @lru_cache(maxsize=1)
     def get_total_expenses(self) -> float:
-        """Get total expenses (negative transactions, as positive number)."""
-        if self.df.empty:
-            return 0.0
-        return abs(float(self._negative_transactions['bedrag'].sum()))
+        """
+        Get total expenses.
+         Calculated as: Total Income - Net Balance.
+         This effectively treats it as 'Net Expenses' where refunds reduce the expense total.
+        """
+        # Expenses is usually displayed as a positive number
+        # Income - Expenses = Net  =>  Expenses = Income - Net
+        return self.get_total_income() - self.get_net_balance()
     
     def get_net_balance(self) -> float:
-        """Get net balance (income - expenses)."""
-        return self.get_total_income() - self.get_total_expenses()
+        """Get true net balance (sum of all transactions)."""
+        if self.df.empty:
+            return 0.0
+        return float(self.df['bedrag'].sum())
     
     @lru_cache(maxsize=1)
     def get_category_totals(self) -> Dict[str, float]:
@@ -94,9 +107,19 @@ class Analytics:
         if self.df.empty:
             return 0.0
         
-        # Use vectorized boolean indexing
-        mask = (self.df['categorie'] == category_name) & (self.df['bedrag'] < 0)
-        return abs(float(self.df.loc[mask, 'bedrag'].sum())) # .loc is slightly explicit, usually safe
+        if self.df.empty:
+            return 0.0
+        
+        # Calculate NET amount for this category
+        # If I spent 100 and got 20 back, sum is -80. Spending is 80.
+        # If I got 100 income, sum is 100. Spending is 0 (or -100?) -> Let's assume spending is 0 for net positive.
+        
+        mask = (self.df['categorie'] == category_name)
+        net_val = self.df.loc[mask, 'bedrag'].sum()
+        
+        if net_val < 0:
+            return abs(float(net_val))
+        return 0.0
 
     @lru_cache(maxsize=1)
     def get_monthly_totals(self) -> pd.DataFrame:
@@ -217,15 +240,15 @@ class Analytics:
         if self.df.empty:
             return {}
         
-        if expense_only:
-            df_subset = self._negative_transactions.copy()
-        else:
-            df_subset = self.df.copy()
-            
-        # Optimization: Don't create new column 'bedrag_abs', just abs() the sum result
-        breakdown = df_subset.groupby('categorie')['bedrag'].sum().abs().to_dict()
+        # Calculate net sums for all categories (using all transactions)
+        grouped = self.df.groupby('categorie')['bedrag'].sum()
         
-        return {str(k): float(v) for k, v in breakdown.items()}
+        if expense_only:
+            # Filter: only keep categories where the NET sum is negative (expense)
+            # This ensures refunds are accounted for (e.g. -100 + 20 = -80 net expense)
+            grouped = grouped[grouped < 0]
+            
+        return grouped.abs().to_dict()
     
     def get_date_range(self) -> Tuple[Optional[date], Optional[date]]:
         """

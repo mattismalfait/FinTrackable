@@ -12,6 +12,29 @@ from config.settings import GEMINI_API_KEY, DEFAULT_CATEGORIES
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+import re
+
+def _is_bad_name(name: str) -> bool:
+    """Check if a name is likely 'gibberish' (dates, numbers, codes)."""
+    if not name or len(name.strip()) < 3:
+        return True
+    
+    # Check for direct date formats like DD/MM/YYYY or similar
+    # e.g. 05-12-2023 or 05/12
+    if re.search(r'\d{2}[-/]\d{2}', name):
+        return True
+        
+    # Check if mostly numbers (e.g. "05122023 14:00")
+    digit_count = sum(c.isdigit() for c in name)
+    if digit_count > len(name) * 0.5:
+        return True
+        
+    # Common vague terms
+    vague = ["kbc", "overschrijving", "betaling", "europese overschrijving", "onbekend", "diverse"]
+    if name.lower().strip() in vague:
+        return True
+        
+    return False
 
 class AiCategorizer:
     """AI agent for intelligent transaction analysis and categorization."""
@@ -76,7 +99,7 @@ class AiCategorizer:
                 results = self._parse_response(response.text)
                 
                 if not results:
-                    st.error("⚠️ De AI heeft geen resultaten teruggegeven voor dit blok.")
+                    st.warning("⚠️ De AI kon deze groep transacties niet verwerken. Ze worden overgeslagen.")
                     continue
 
                 
@@ -90,12 +113,14 @@ class AiCategorizer:
                     txn.ai_confidence = float(result.get('confidence', 0.5))
                     
                     # Only change category if confidence > 0.5
-                    ai_cat = result.get('category')
+                    # Store raw AI suggestion
+                    txn.ai_category = ai_cat
+                    
                     if ai_cat:
                         # 1. Exact case-insensitive mapping
                         matched_cat = cat_map.get(ai_cat.lower())
                         
-                        # 2. Heuristic mapping (if AI returned "Eten" for "Eten & Drinken")
+                        # 2. Heuristic mapping
                         if not matched_cat:
                             ai_cat_lower = ai_cat.lower()
                             for db_cat in getattr(self, 'available_categories', []):
@@ -104,20 +129,43 @@ class AiCategorizer:
                                     break
                                     
                         if matched_cat and txn.ai_confidence > 0.5:
-                            txn.categorie = matched_cat
-                        elif not matched_cat:
-                            logger.warning(f"AI suggested unknown category: {ai_cat}")
+                            # Limit "Overig": Do not overwrite a specific category with "Overig"
+                            is_new_overig = matched_cat.lower() == 'overig'
+                            has_existing_cat = txn.categorie and txn.categorie.lower() != 'overig'
+                            
+                            if is_new_overig and has_existing_cat:
+                                logger.info(f"AI suggested Overig but kept {txn.categorie}")
+                            else:
+                                txn.categorie = matched_cat
+                        elif not matched_cat and txn.ai_confidence > 0.5:
+                            # New category suggested!
+                            # We do NOT set txn.categorie yet, as it doesn't exist.
+                            # The UI will see txn.ai_category != txn.categorie and suggest creation.
+                            logger.info(f"AI suggested NEW category: {ai_cat}")
                     
-                    # Update the display name if AI is confident and current name is vague
-                    vague_names = ["kbc ---", "---", "", "onbekend", "overschrijving"]
-
-                    if txn.ai_confidence > 0.8 and (not txn.naam_tegenpartij or txn.naam_tegenpartij.lower() in vague_names):
-                        txn.naam_tegenpartij = txn.ai_name
+                    
+                    # Update the display name if AI is confident and current name is vague or looks like raw data
+                    # Use helper to check for bad names
+                    if txn.ai_confidence > 0.7:
+                        current_is_bad = _is_bad_name(txn.naam_tegenpartij)
+                        new_is_valid =  txn.ai_name and len(txn.ai_name.strip()) > 2
+                        
+                        if current_is_bad and new_is_valid:
+                            logger.info(f"Overwriting bad name '{txn.naam_tegenpartij}' with '{txn.ai_name}'")
+                            txn.naam_tegenpartij = txn.ai_name
+                        elif not txn.naam_tegenpartij or txn.naam_tegenpartij.lower() in ["kbc ---", "---", "", "onbekend"]:
+                            txn.naam_tegenpartij = txn.ai_name
                         
             except Exception as e:
-                msg = f"Error calling Gemini: {str(e)}"
-                logger.error(msg)
-                st.error(msg) # Show to user since this is a fragment/UI context usually
+                error_msg = str(e)
+                logger.error(f"Error calling Gemini: {error_msg}")
+                
+                if "429" in error_msg:
+                    st.error("⏳ De AI-service is momenteel druk of u heeft uw limiet bereikt. Probeer het later opnieuw.")
+                elif "401" in error_msg or "API key" in error_msg:
+                    st.error("🔑 Er is een probleem met de API-sleutel. Controleer uw configuratie.")
+                else:
+                    st.error("❌ Er is een onverwachte fout opgetreden bij de AI-verwerking. Probeer het opnieuw.")
                 
             processed_txns.extend(chunk)
             
@@ -151,19 +199,19 @@ Your goal is to enrich each transaction with accurate identifying data and the m
 4. CONFIDENCE: Score from 0.0 to 1.0.
 
 # CRITICAL RULES:
-- **AVOID 'Overig'**: 'Overig' is a fail-state. Only use it if you have absolutely NO IDEA what the transaction is. If you have a reasonable guess (even 51% sure), use the specific category.
-- **OVERWRITE CATEGORY**: If you are more than 50% confident (> 0.5), you MUST assign the specific category. 
-- **EXACT MATCH**: You MUST use one of the exact category names provided.
-- **MERCHANT NAMES**: Use well-known merchant names (e.g., 'Colruyt', 'Telenet', 'Netflix') if found.
+- **AVOID 'Overig'**: 'Overig' is a fail-state.
+- **NEW CATEGORIES**: If the transaction clearly belongs to a specific category that is NOT in the list (e.g., "Cryptocurrency", "Subscription"), you may suggest a NEW category name. Use Title Case (e.g., "Streaming Services").
+- **OVERWRITE**: If > 50% confident, assign the category.
+- **EXACT MATCH**: If it fits an existing category, use the EXACT name.
 
 # USER SPECIFIC HINTS:
 - 'MATTIS' with amount > 100 is likely 'Investeren'.
 - Positive amounts are 'Inkomen' unless it's a refund.
-- 'Bancontact' or 'Maestro' usually implies 'Eten & Drinken' or 'Shopping' depending on the merchant.
+- 'Bancontact' or 'Maestro' usually implies 'Eten & Drinken' or 'Shopping'.
 
 # OUTPUT FORMAT:
 Output ONLY a valid JSON array of objects.
-[{{"index": 0, "name": "Exact Merchant Name", "category": "Exact Category Name", "reasoning": "Reason here", "confidence": 0.95}}]
+[{{"index": 0, "name": "Exact Merchant Name", "category": "Existing Or New Category Name", "reasoning": "Reason here", "confidence": 0.95}}]
 
 # TRANSACTIONS TO ANALYZE:
 {tx_list_str}
@@ -193,9 +241,6 @@ Output ONLY a valid JSON array of objects.
                 raise
                 
         except Exception as e:
-            msg = f"Failed to parse AI response: {str(e)}"
-            logger.error(f"{msg} | Text: {text[:200]}...")
-            # Include a snippet of the response to help the user identify the problem
-            snippet = text[:100].replace("{", "{{").replace("}", "}}")
-            st.error(f"⚠️ AI Parsing Fout: De AI gaf een ongeldig antwoord terug. Ontvangen snippet: '{snippet}...'")
+            logger.error(f"Failed to parse AI response: {str(e)} | Text: {text[:200]}...")
+            st.warning("⚠️ De AI gaf een antwoord dat niet verwerkt kon worden. Probeer de analyse opnieuw.")
             return []
