@@ -3,11 +3,11 @@ CSV upload interface with intelligent category suggestion.
 """
 
 import streamlit as st
-from services.csv_parser import CSVParser
+from datetime import datetime
+from services.universal_parser import UniversalParser
 from services.ai_categorizer import AiCategorizer
-from services.categorization import CategorizationEngine
-
 from database.operations import DatabaseOperations
+from models.transaction import Transaction
 from views.auth import get_current_user
 from models.category import Category
 import pandas as pd
@@ -79,10 +79,10 @@ def show_file_upload():
     """Step 1: File upload and parsing."""
     
     uploaded_file = st.file_uploader(
-        "Kies een CSV-bestand",
-        type=['csv'],
+        "Kies een afschrift van je bank (CSV of Excel)",
+        type=['csv', 'xlsx', 'xls'],
         key="csv_uploader_key",
-        help="Upload een KBC CSV-bestand met kolommen: Datum, Bedrag, Naam tegenpartij, Omschrijving"
+        help="Upload een CSV of Excel bestand. FinTrackable herkent automatisch formaten van KBC, ING, Revolut, N26 en anderen."
     )
     
     if uploaded_file is not None:
@@ -91,85 +91,91 @@ def show_file_upload():
             st.error("Je moet ingelogd zijn om bestanden te uploaden")
             return
         
-        parser = CSVParser()
+        # Step: Upload & Parse
+        parser = UniversalParser()
         
-        with st.spinner("CSV-bestand wordt verwerkt..."):
-            transactions, df, errors = parser.process_csv(uploaded_file)
+        with st.spinner("Bestand wordt geanalyseerd door AI..."):
+            raw_transactions, df, messages = parser.process_file(uploaded_file)
             
-            if errors:
-                with st.expander("⚠️ Waarschuwingen", expanded=len(transactions) == 0):
-                    for error in errors:
-                        st.warning(error)
+            if messages:
+                for msg in messages:
+                    if "✅" in msg:
+                        st.success(msg)
+                    elif "⚠️" in msg:
+                        st.info(msg)
+                    elif "❌" in msg:
+                        st.error(msg)
             
+            if not raw_transactions:
+                return
+
             # Filter out duplicates immediately
-            if transactions:
-                db_ops = DatabaseOperations()
-                existing_hashes = db_ops.get_existing_hashes(user.id)
+            db_ops = DatabaseOperations()
+            existing_hashes = db_ops.get_existing_hashes(user.id)
+            
+            unique_transactions = []
+            duplicate_count = 0
+            import hashlib
+            
+            for t in raw_transactions:
+                if not t.hash:
+                    t.generate_hash()
                 
-                # Generate hashes for new transactions (if not already done)
-                unique_transactions = []
-                duplicate_count = 0
-                import hashlib
+                legacy_str = f"{t.datum}|{t.bedrag}|{t.naam_tegenpartij or ''}|{t.omschrijving or ''}"
+                legacy_hash = hashlib.md5(legacy_str.encode()).hexdigest()
                 
-                for t in transactions:
-                    if not t.hash:
-                        t.generate_hash()
-                    
-                    # Calculate legacy hash for backward compatibility
-                    # Old format: datum|bedrag|naam_tegenpartij|omschrijving
-                    legacy_str = f"{t.datum}|{t.bedrag}|{t.naam_tegenpartij or ''}|{t.omschrijving or ''}"
-                    legacy_hash = hashlib.md5(legacy_str.encode()).hexdigest()
-                    
-                    if t.hash in existing_hashes:
-                        duplicate_count += 1
-                        # st.write(f"Strict Duplicate: {t.hash}") # Debug
-                    elif legacy_hash in existing_hashes:
-                        duplicate_count += 1
-                        # st.write(f"Legacy Duplicate: {legacy_hash} for {t.bedrag}") # Debug
-                    else:
-                        unique_transactions.append(t)
-                        # Add both to set to prevent duplicates within the same upload file
-                        existing_hashes.add(t.hash)
-                        existing_hashes.add(legacy_hash)
+                if t.hash in existing_hashes or legacy_hash in existing_hashes:
+                    duplicate_count += 1
+                else:
+                    unique_transactions.append(t)
+                    existing_hashes.add(t.hash)
+                    existing_hashes.add(legacy_hash)
+            
+            # Store transactions in session state before AI step
+            st.session_state['current_transactions'] = unique_transactions
+            
+            if duplicate_count > 0:
+                st.info(f"ℹ️ **{duplicate_count}** dubbele transacties zijn eruit gefilterd.")
+            
+            if not unique_transactions:
+                st.warning("⚠️ Alle transacties in dit bestand staan al in het systeem.")
+                return
                 
-                if duplicate_count > 0:
-                    st.info(f"ℹ️ **{duplicate_count}** dubbele transacties zijn eruit gefilterd (al in systeem).")
-                
-                if not unique_transactions:
-                    st.warning("⚠️ Alle geüploade transacties zitten al in het systeem.")
-                    st.stop()
-                    
-                transactions = unique_transactions
-                st.success(f"✅ {len(transactions)} nieuwe transacties klaar om te importeren")
+            st.success(f"✅ {len(unique_transactions)} nieuwe transacties klaar voor analyse")
             
             # Show preview
-            with st.expander("📋 Voorbeeld transacties", expanded=True):
+            with st.expander("📋 Voorbeeld van ingelezen data", expanded=True):
                 preview_df = pd.DataFrame([{
                     'Datum': t.datum,
                     'Bedrag': f"€{t.bedrag:,.2f}",
                     'Tegenpartij': t.naam_tegenpartij or '-'
-                } for t in transactions[:10]])
-
-                
+                } for t in unique_transactions[:10]])
                 st.dataframe(preview_df, use_container_width=True, hide_index=True)
-                
-                if len(transactions) > 10:
-                    st.info(f"... en {len(transactions) - 10} meer transacties")
-            
+
             # Analyze and suggest categories using AI agent
-            if st.button("AI Agent: Analyseer Transacties 🤖", type="primary"):
-                user_categories = db_ops.get_categories(user.id)
+            if st.button("AI Agent: Analyseer & Categoriseer 🤖", type="primary", use_container_width=True):
                 ai_categorizer = AiCategorizer()
                 
-                with st.spinner("De AI agent analyseert je transacties..."):
-                    # The AI categorizer processes batches and enriches transactions
-                    processed_txns = ai_categorizer.analyze_batch(transactions)
+                with st.spinner("De AI agent analyseert de transacties..."):
+                    # Use the stored transactions
+                    txns_to_analyze = st.session_state.get('current_transactions', [])
+                    if not txns_to_analyze:
+                        st.error("Sessie verlopen. Upload het bestand opnieuw.")
+                        return
+                        
+                    processed_txns = ai_categorizer.analyze_batch(txns_to_analyze)
                 
-                # We still want to group for the suggest_categories view or show individual?
-                # The existing view shows category "cards". We'll adapt it.
-                st.session_state['parsed_transactions'] = processed_txns
-                st.session_state['upload_step'] = 'review_categories'
-                st.rerun()
+                if not processed_txns:
+                    st.error("❌ Er ging iets mis bij de AI-analyse. Probeer het opnieuw.")
+                else:
+                    st.session_state['parsed_transactions'] = processed_txns
+                    st.session_state['upload_step'] = 'review_categories'
+                    st.rerun()
+
+    # Cancel button at any time during Step 1
+    if st.button("❌ Annuleren & Terug naar Dashboard", use_container_width=True):
+        st.session_state['page'] = 'dashboard'
+        st.rerun()
 
 
 def show_category_review():
@@ -321,7 +327,7 @@ def show_category_review():
     col1, col2 = st.columns(2)
     
     with col1:
-        if st.button("⬅️ Terug", use_container_width=True):
+        if st.button("⬅️ Terug naar Bestand Kiezen", use_container_width=True):
             st.session_state['upload_step'] = 'upload'
             st.rerun()
     

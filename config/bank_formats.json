@@ -1,0 +1,223 @@
+{
+    "kbc_dutch": {
+        "name": "KBC Bank (Nederland/België)",
+        "description": "KBC bank CSV format in Dutch",
+        "enabled": true,
+        "file_pattern": "*.csv",
+        "encoding": [
+            "utf-8",
+            "latin-1",
+            "iso-8859-1",
+            "cp1252"
+        ],
+        "delimiter": ";",
+        "decimal_separator": ",",
+        "thousands_separator": ".",
+        "date_formats": [
+            "%d/%m/%Y",
+            "%-d/%m/%Y",
+            "%d-%m-%Y"
+        ],
+        "column_mapping": {
+            "date": "Datum",
+            "amount": "Bedrag",
+            "counterparty_name": "Naam tegenpartij",
+            "description": "Omschrijving",
+            "account_number": "Rekeningnummer",
+            "balance": "Saldo"
+        },
+        "detection_rules": {
+            "required_columns": [
+                "Datum",
+                "Bedrag"
+            ],
+            "optional_columns": [
+                "Naam tegenpartij",
+                "Omschrijving"
+            ]
+        },
+        "preprocessing": {
+            "skip_rows": 0,
+            "skip_footer": 0,
+            "header_row": 0
+        }
+    },
+    "ing_dutch": {
+        "name": "ING Bank (Nederland)",
+        "description": "ING bank CSV format",
+        "enabled": true,
+        "file_pattern": "*.csv",
+        "encoding": [
+            "utf-8",
+            "latin-1"
+        ],
+        "delimiter": ";",
+        "decimal_separator": ",",
+        "thousands_separator": ".",
+        "date_formats": [
+            "%Y%m%d",
+            "%d-%m-%Y"
+        ],
+        "column_mapping": {
+            "date": "Datum",
+            "amount": "Bedrag (EUR)",
+            "counterparty_name": "Naam / Omschrijving",
+            "description": "Mededelingen",
+            "account_number": "Rekening",
+            "transaction_type": "Af Bij"
+        },
+        "detection_rules": {
+            "required_columns": [
+                "Datum",
+                "Bedrag (EUR)"
+            ],
+            "optional_columns": [
+                "Naam / Omschrijving"
+            ]
+        },
+        "preprocessing": {
+            "skip_rows": 0,
+            "skip_footer": 0,
+            "header_row": 0
+        }
+    },
+    "revolut_english": {
+        "name": "Revolut",
+        "description": "Revolut CSV export in English",
+        "enabled": true,
+        "file_pattern": "*.csv",
+        "encoding": [
+            "utf-8"
+        ],
+        "delimiter": ",",
+        "decimal_separator": ".",
+        "thousands_separator": "",
+        "date_formats": [
+            "%Y-%m-%d",
+            "%d %b %Y",
+            "%d/%m/%Y"
+        ],
+        "column_mapping": {
+            "date": "Completed Date",
+            "amount": "Amount",
+            "counterparty_name": "Description",
+            "description": "Description",
+            "currency": "Currency",
+            "balance": "Balance"
+        },
+        "detection_rules": {
+            "required_columns": [
+                "Completed Date",
+                "Amount"
+            ],
+            "optional_columns": [
+                "Description"
+            ]
+        },
+        "preprocessing": {
+            "skip_rows": 0,
+            "skip_footer": 0,
+            "header_row": 0
+        }
+    },
+    "n26_german": {
+        "name": "N26 Bank (Deutsch)",
+        "description": "N26 bank CSV format in German",
+        "enabled": true,
+        "file_pattern": "*.csv",
+        "encoding": [
+            "utf-8"
+        ],
+        "delimiter": ",",
+        "decimal_separator": ".",
+        "thousands_separator": "",
+        "date_formats": [
+            "%Y-%m-%d"
+        ],
+        "column_mapping": {
+            "date": "Datum",
+            "amount": "Betrag (EUR)",
+            "counterparty_name": "Empfänger",
+            "description": "Verwendungszweck",
+            "transaction_type": "Transaktionstyp"
+        },
+        "detection_rules": {
+            "required_columns": [
+                "Datum",
+                "Betrag (EUR)"
+            ],
+            "optional_columns": [
+                "Empfänger"
+            ]
+        },
+        "preprocessing": {
+            "skip_rows": 0,
+            "skip_footer": 0,
+            "header_row": 0
+        }
+    },
+    "generic_csv": {
+        "name": "Generic CSV (AI Detection)",
+        "description": "Automatically detect column mappings using AI",
+        "enabled": true,
+        "file_pattern": "*.csv",
+        "encoding": [
+            "utf-8",
+            "latin-1",
+            "iso-8859-1"
+        ],
+        "delimiter": [
+            "auto"
+        ],
+        "decimal_separator": [
+            ".",
+            ","
+        ],
+        "thousands_separator": [
+            "",
+            ".",
+            ","
+        ],
+        "date_formats": [
+            "%Y-%m-%d",
+            "%d/%m/%Y",
+            "%m/%d/%Y",
+            "%d-%m-%Y",
+            "%Y%m%d"
+        ],
+        "column_mapping": "auto",
+        "detection_rules": {
+            "use_ai": true,
+            "required_fields": [
+                "date",
+                "amount"
+            ],
+            "optional_fields": [
+                "counterparty_name",
+                "description",
+                "balance"
+            ]
+        },
+        "preprocessing": {
+            "skip_rows": 0,
+            "skip_footer": 0,
+            "header_row": 0
+        }
+    },
+    "generic_excel": {
+        "name": "Excel Spreadsheet (AI Detection)",
+        "description": "Automatically detect column mappings from Excel (.xlsx, .xls) files",
+        "enabled": true,
+        "file_pattern": "*.xlsx, *.xls",
+        "decimal_separator": "auto",
+        "date_formats": [
+            "%Y-%m-%d",
+            "%d/%m/%Y"
+        ],
+        "column_mapping": "auto",
+        "detection_rules": {
+            "use_ai": true
+        },
+        "preprocessing": {}
+    }
+}

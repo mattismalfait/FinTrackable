@@ -5,26 +5,42 @@
 /* Based on design_concepts.html reference      */
 /* ============================================ */
 
+/* === COLOR SYSTEM & VARIABLES === */
+:root {
+    --color-primary: #6366f1;
+    --color-charcoal: #1a1a1a;
+    --color-bg: #ffffff;
+    --color-surface: #ffffff;
+    --color-text: #1a1a1a;
+    --color-text-muted: #64748b;
+    --color-border: #f1f1f1;
+    --color-empty-bar: #F8FAF8;
+    --color-error: #e11d48;
+    --color-success: #10b981;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --color-bg: #0f172a;
+        --color-surface: #1e293b;
+        --color-text: #f8fafc;
+        --color-charcoal: #f1f5f9;
+        --color-text-muted: #94a3b8;
+        --color-border: rgba(255, 255, 255, 0.1);
+        --color-empty-bar: #334155;
+    }
+}
+
 /* === GLOBAL STYLES === */
 html,
 body,
 [class*="css"] {
     font-family: 'Manrope', sans-serif;
+    color: var(--color-text);
 }
 
 .main {
-    background-color: #ffffff;
-}
-
-/* === COLOR SYSTEM === */
-:root {
-    --color-primary: #6366f1;
-    --color-charcoal: #1a1a1a;
-    --color-border-refined: #f1f1f1;
-    --color-empty-bar: #F8FAF8;
-    --color-error: #e11d48;
-    --color-success: #10b981;
-    --color-muted: #64748b;
+    background-color: var(--color-bg);
 }
 
 /* === REFINED SIDEBAR === */
@@ -70,10 +86,10 @@ body,
 
 /* === REFINED CARDS & METRICS === */
 [data-testid="stMetric"] {
-    background: white;
+    background: var(--color-surface);
     padding: 1.5rem;
     border-radius: 1rem;
-    border: 1px solid var(--color-border-refined);
+    border: 1px solid var(--color-border);
     transition: all 0.2s ease;
 }
 
@@ -81,16 +97,22 @@ body,
     border-color: rgba(26, 26, 26, 0.1);
 }
 
+@media (prefers-color-scheme: dark) {
+    [data-testid="stMetric"]:hover {
+        border-color: rgba(255, 255, 255, 0.2);
+    }
+}
+
 [data-testid="stMetricValue"] {
     font-size: 2rem !important;
     font-weight: 800 !important;
-    color: var(--color-charcoal) !important;
+    color: var(--color-text) !important;
     letter-spacing: -0.02em;
 }
 
 [data-testid="stMetricLabel"] {
     font-weight: 700 !important;
-    color: var(--color-muted) !important;
+    color: var(--color-text-muted) !important;
     text-transform: uppercase;
     letter-spacing: 0.1em;
     font-size: 0.625rem !important;
@@ -99,10 +121,10 @@ body,
 /* === TABS === */
 .stTabs [data-baseweb="tab-list"] {
     gap: 6px;
-    background-color: white;
+    background-color: var(--color-surface);
     padding: 4px;
     border-radius: 0.75rem;
-    border: 1px solid var(--color-border-refined);
+    border: 1px solid var(--color-border);
 }
 
 .stTabs [data-baseweb="tab"] {
@@ -114,7 +136,7 @@ body,
     letter-spacing: 0.1em;
     transition: all 0.2s;
     border: none !important;
-    color: rgba(26, 26, 26, 0.4);
+    color: var(--color-text-muted);
 }
 
 .stTabs [aria-selected="true"] {
@@ -124,34 +146,45 @@ body,
 
 /* === BUTTONS === */
 .stButton>button {
-    border-radius: 0.75rem;
-    font-weight: 700;
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    transition: all 0.2s;
-    padding: 0.625rem 1.5rem;
-    border: 1px solid var(--color-border-refined);
+    border-radius: 0.75rem !important;
+    font-weight: 700 !important;
+    font-size: 0.8rem !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    padding: 0.625rem 2rem !important;
+    border: 1px solid var(--color-border) !important;
+    width: auto;
+    min-width: 140px;
+    color: var(--color-text) !important;
 }
 
 .stButton>button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+    border-color: var(--color-primary) !important;
 }
 
+/* Primary Button (Main Actions) */
 .stButton>button[kind="primary"] {
-    background-color: var(--color-charcoal);
-    color: white;
-    border: none;
+    background-color: var(--color-primary) !important;
+    color: white !important;
+    border: none !important;
 }
 
 .stButton>button[kind="primary"]:hover {
-    background-color: #000000;
+    background-color: #4f46e5 !important;
+    box-shadow: 0 8px 20px rgba(99, 102, 241, 0.3) !important;
 }
 
+/* Secondary Button (Default) */
 .stButton>button[kind="secondary"] {
-    background-color: white;
-    color: var(--color-charcoal);
+    background-color: var(--color-surface) !important;
+    color: var(--color-text) !important;
+}
+
+.stButton>button[kind="secondary"]:hover {
+    background-color: var(--color-empty-bar) !important;
 }
 
 /* === FORMS & INPUTS === */
@@ -159,7 +192,9 @@ body,
 .stSelectbox [data-baseweb="select"],
 .stNumberInput input {
     border-radius: 0.75rem !important;
-    border: 1px solid var(--color-border-refined) !important;
+    border: 1px solid var(--color-border) !important;
+    background-color: var(--color-surface) !important;
+    color: var(--color-text) !important;
     font-weight: 500;
     transition: all 0.2s;
 }
@@ -173,10 +208,10 @@ body,
 
 /* === EXPANDERS === */
 .stExpander {
-    border: 1px solid var(--color-border-refined) !important;
+    border: 1px solid var(--color-border) !important;
     border-radius: 1rem !important;
     overflow: hidden;
-    background: white !important;
+    background: var(--color-surface) !important;
 }
 
 .stExpander summary {
@@ -184,14 +219,15 @@ body,
     font-size: 0.75rem;
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    color: var(--color-charcoal);
+    color: var(--color-text);
 }
 
 /* === DATA TABLES === */
 .stDataFrame {
-    border: 1px solid var(--color-border-refined) !important;
+    border: 1px solid var(--color-border) !important;
     border-radius: 0.75rem !important;
     overflow: hidden;
+    background-color: var(--color-surface) !important;
 }
 
 /* === PROGRESS BARS === */
@@ -203,7 +239,9 @@ body,
 /* === ALERTS & MESSAGES === */
 .stAlert {
     border-radius: 0.75rem;
-    border: 1px solid var(--color-border-refined);
+    border: 1px solid var(--color-border);
+    background-color: var(--color-surface) !important;
+    color: var(--color-text) !important;
 }
 
 /* === TYPOGRAPHY ENHANCEMENTS === */
@@ -214,19 +252,19 @@ h4,
 h5,
 h6 {
     font-weight: 800;
-    color: var(--color-charcoal);
+    color: var(--color-text);
     letter-spacing: -0.02em;
 }
 
 p {
-    color: rgba(26, 26, 26, 0.7);
+    color: var(--color-text-muted);
     font-weight: 500;
 }
 
 /* === CUSTOM UTILITY CLASSES === */
 .refined-card {
-    background: white;
-    border: 1px solid var(--color-border-refined);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
     border-radius: 1rem;
     padding: 1.5rem;
 }

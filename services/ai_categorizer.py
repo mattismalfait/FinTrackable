@@ -99,20 +99,21 @@ class AiCategorizer:
                 results = self._parse_response(response.text)
                 
                 if not results:
-                    st.warning("⚠️ De AI kon deze groep transacties niet verwerken. Ze worden overgeslagen.")
-                    continue
-
+                    st.warning("⚠️ De AI kon deze groep transacties niet automatisch categoriseren. Je kunt ze nu handmatig toewijzen.")
+                    # Fallback: keep processing without continue to ensure data isn't lost
+                    results = [] 
                 
                 # Prepare case-insensitive lookup
                 cat_map = {c.lower(): c for c in getattr(self, 'available_categories', [])}
 
                 # Map results back to transactions
+                # If AI returned fewer results than transactions, zip will truncate (safe as we just miss enrichment)
                 for txn, result in zip(chunk, results):
                     txn.ai_name = result.get('name', txn.naam_tegenpartij)
                     txn.ai_reasoning = result.get('reasoning', '')
                     txn.ai_confidence = float(result.get('confidence', 0.5))
+                    ai_cat = result.get('category')
                     
-                    # Only change category if confidence > 0.5
                     # Store raw AI suggestion
                     txn.ai_category = ai_cat
                     
@@ -139,13 +140,10 @@ class AiCategorizer:
                                 txn.categorie = matched_cat
                         elif not matched_cat and txn.ai_confidence > 0.5:
                             # New category suggested!
-                            # We do NOT set txn.categorie yet, as it doesn't exist.
-                            # The UI will see txn.ai_category != txn.categorie and suggest creation.
                             logger.info(f"AI suggested NEW category: {ai_cat}")
                     
                     
                     # Update the display name if AI is confident and current name is vague or looks like raw data
-                    # Use helper to check for bad names
                     if txn.ai_confidence > 0.7:
                         current_is_bad = _is_bad_name(txn.naam_tegenpartij)
                         new_is_valid =  txn.ai_name and len(txn.ai_name.strip()) > 2
@@ -186,32 +184,30 @@ class AiCategorizer:
         tx_list_str = json.dumps(tx_data, indent=2)
         
         prompt = f"""
-As an expert financial analyst for the Belgian and European market, analyze these bank transactions.
-Your goal is to enrich each transaction with accurate identifying data and the most appropriate category.
+As an international financial analysis agent, analyze these bank transactions from any bank and in any language (Dutch, French, English, German, etc.).
+Your goal is to extract standardized merchant names and high-quality categories.
 
 # CATEGORIES & CONTEXT:
 {self.categories_context}
 
 # YOUR TASKS:
-1. IDENTIFY MERCHANT: Look at 'raw_name' and 'description'. If 'raw_name' is generic (e.g. 'KBC ---', 'Overschrijving'), extract the real merchant from the 'description'.
-2. CATEGORIZE: Pick the BEST category from the list above. 
-3. REASONING: Briefly explain your choice (max 10 words).
+1. IDENTIFY MERCHANT: Regardless of the original language (e.g., 'Betaling', 'Payment', 'Paiement'), extract the real merchant/recipient name. 
+   - Remove generic banking terms (like "KBC", "ING", "European Transfer").
+   - Clean up raw data strings into readable merchant names (e.g., 'ALDI 123 STORE' -> 'Aldi').
+2. CATEGORIZE: Map the transaction to the BEST matching category from the list above.
+   - If the merchant is international (e.g., Amazon, Shell, McDonald's), use your global knowledge to categorize them.
+3. REASONING: Explain your logic in English (max 10 words).
 4. CONFIDENCE: Score from 0.0 to 1.0.
 
 # CRITICAL RULES:
-- **AVOID 'Overig'**: 'Overig' is a fail-state.
-- **NEW CATEGORIES**: If the transaction clearly belongs to a specific category that is NOT in the list (e.g., "Cryptocurrency", "Subscription"), you may suggest a NEW category name. Use Title Case (e.g., "Streaming Services").
-- **OVERWRITE**: If > 50% confident, assign the category.
-- **EXACT MATCH**: If it fits an existing category, use the EXACT name.
-
-# USER SPECIFIC HINTS:
-- 'MATTIS' with amount > 100 is likely 'Investeren'.
-- Positive amounts are 'Inkomen' unless it's a refund.
-- 'Bancontact' or 'Maestro' usually implies 'Eten & Drinken' or 'Shopping'.
+- **LANGUAGE INDEPENDENT**: Patterns like 'Huur', 'Rent', 'Loyer' all mean 'Wonen' if that's your category for housing.
+- **AVOID 'Overig'**: Only use if the transaction is completely unintelligible.
+- **NEW CATEGORIES**: If a transaction clearly belongs to a specific category NOT listed (e.g., "Subscription", "Crypto"), suggest it in Title Case.
+- **OVERWRITE**: If your confidence is > 50%, you MUST provide an assignment.
 
 # OUTPUT FORMAT:
 Output ONLY a valid JSON array of objects.
-[{{"index": 0, "name": "Exact Merchant Name", "category": "Existing Or New Category Name", "reasoning": "Reason here", "confidence": 0.95}}]
+[{{"index": 0, "name": "Standardized Merchant", "category": "Category Name", "reasoning": "English reasoning", "confidence": 0.95}}]
 
 # TRANSACTIONS TO ANALYZE:
 {tx_list_str}

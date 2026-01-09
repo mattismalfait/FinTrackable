@@ -212,7 +212,7 @@ def show_dashboard():
         total_income=current_analytics.get_total_income(),
         total_expenses=current_analytics.get_total_expenses(),
         net_balance=net_bal,
-        net_color="#10b981" if net_bal >= 0 else "#ef4444",
+        net_color="var(--color-success)" if net_bal >= 0 else "var(--color-error)",
         investment_pct=current_analytics.get_investment_percentage()
     ), unsafe_allow_html=True)
     
@@ -383,7 +383,7 @@ def show_budget_comparison(analytics: Analytics, categories: list[dict], user_id
         t_bg = "#fee2e2" if total_surplus < 0 else "#f0fdf4"
         
         st.markdown(dedent(f"""
-            <div style="display: flex; justify-content: space-between; padding: 10px; background-color: {t_bg}; border-radius: 5px; font-weight: bold; margin-top: -15px; border: 1px solid #e2e8f0;">
+            <div style="display: flex; justify-content: space-between; padding: 10px; background-color: var(--color-surface); border-radius: 5px; font-weight: bold; margin-top: -15px; border: 1px solid var(--color-border);">
                 <span>TOTAAL</span>
                 <span style="color: {t_color};">Overschot: €{total_surplus:,.2f}</span>
             </div>
@@ -443,14 +443,14 @@ def _style_budget_surplus(row):
         # Investeren logic: Surplus (underspending) is BAD.
         if category == "Investeren":
             if val > 0: # Underspent
-                style = 'background-color: #fee2e2; color: #b91c1c; font-weight: bold;'
+                style = f'background-color: rgba(225, 29, 72, 0.2); color: var(--color-error); font-weight: bold;'
             else:
-                style = 'color: #15803d;'
+                style = 'color: var(--color-success);'
         else:
             if val < 0: # Overspent
-                style = 'background-color: #fee2e2; color: #b91c1c; font-weight: bold;'
+                style = f'background-color: rgba(225, 29, 72, 0.2); color: var(--color-error); font-weight: bold;'
             else:
-                style = 'color: #15803d;'
+                style = 'color: var(--color-success);'
                 
         base_styles = [border_style] * 5
         base_styles[4] += f" {style}"

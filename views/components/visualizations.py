@@ -49,7 +49,9 @@ def create_monthly_trend_chart(monthly_by_category: pd.DataFrame, category_color
         height=CHART_CONFIG['height'],
         font=dict(family=CHART_CONFIG['font_family']),
         showlegend=True,
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)'
     )
     
     return fig
@@ -111,7 +113,9 @@ def create_income_expense_chart(monthly_totals: pd.DataFrame) -> go.Figure:
         height=CHART_CONFIG['height'],
         font=dict(family=CHART_CONFIG['font_family']),
         showlegend=True,
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)'
     )
     
     return fig
@@ -153,7 +157,9 @@ def create_category_breakdown(category_totals: Dict[str, float], category_colors
         height=CHART_CONFIG['height'],
         font=dict(family=CHART_CONFIG['font_family']),
         showlegend=True,
-        legend=dict(orientation="v", yanchor="middle", y=0.5)
+        legend=dict(orientation="v", yanchor="middle", y=0.5),
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)'
     )
     
     return fig
@@ -200,7 +206,9 @@ def create_investment_progress(current_percentage: float, goal_percentage: float
     
     fig.update_layout(
         height=300,
-        font=dict(family=CHART_CONFIG['font_family'])
+        font=dict(family=CHART_CONFIG['font_family']),
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)'
     )
     
     return fig
@@ -269,7 +277,9 @@ def create_year_comparison(yearly_data: Dict[int, Dict[str, float]]) -> go.Figur
         hovermode='x unified',
         height=CHART_CONFIG['height'],
         font=dict(family=CHART_CONFIG['font_family']),
-        showlegend=True
+        showlegend=True,
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)'
     )
     
     return fig

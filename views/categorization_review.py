@@ -123,6 +123,7 @@ def handle_pending_change(user_id: str, db_ops: DatabaseOperations):
         c_id = cat_name_to_id.get(cat_val)
         
         # Update session state DF immediately
+        if "Select" in changes: df.at[idx, "Select"] = bool(changes["Select"])
         if "Categorie" in changes: df.at[idx, "Categorie"] = cat_val
         if "Lopende" in changes: df.at[idx, "Lopende"] = bool(changes["Lopende"])
         if "Tegenpartij" in changes: df.at[idx, "Tegenpartij"] = str(changes["Tegenpartij"])
@@ -234,7 +235,13 @@ def show_pending_review(user_id: str, db_ops: DatabaseOperations):
 
 
         
-        st.session_state.pending_trans_df = pd.DataFrame(df_data)
+        # Convert to DataFrame with predefined columns to avoid KeyError on empty data
+        columns = ["Select", "Datum", "Tegenpartij", "Bedrag", "Categorie", "Lopende", "Omschrijving", "AI Naam", "AI Motivatie", "Vertrouwen", "id"]
+        if df_data:
+            st.session_state.pending_trans_df = pd.DataFrame(df_data)
+        else:
+            st.session_state.pending_trans_df = pd.DataFrame(columns=columns)
+            
         st.session_state.pending_trans_reload = False
         
         # Clear editor state because underlying data changed
