@@ -24,7 +24,7 @@ class AiCategorizer:
             return
             
         self.client = genai.Client(api_key=api_key)
-        self.model_name = 'gemini-1.5-flash'
+        self.model_name = 'gemini-flash-latest'
         self.enabled = True
 
 
@@ -145,18 +145,21 @@ Your goal is to enrich each transaction with accurate identifying data and the m
 {self.categories_context}
 
 # YOUR TASKS:
-1. IDENTIFY MERCHANT: Look at 'raw_name' and 'description'. If 'raw_name' is generic (e.g. 'KBC ---', 'Overschrijving'), extract the real merchant from the 'description' (e.g. 'STARBUCKS', 'AMAZON', 'TELENET').
-2. CATEGORIZE: Pick the BEST category from the list above. Use your general knowledge for well-known brands.
+1. IDENTIFY MERCHANT: Look at 'raw_name' and 'description'. If 'raw_name' is generic (e.g. 'KBC ---', 'Overschrijving'), extract the real merchant from the 'description'.
+2. CATEGORIZE: Pick the BEST category from the list above. 
 3. REASONING: Briefly explain your choice (max 10 words).
-4. CONFIDENCE: Score from 0.0 to 1.0 based on how sure you are.
+4. CONFIDENCE: Score from 0.0 to 1.0.
 
-- EXACT CATEGORY NAMES: You MUST use the exact names from the list above. No variations.
-- BE DECISIVE: Avoid 'Overig' if ANY other category fits reasonably well. Use your general knowledge for merchants.
-- USER SPECIFIC RULES:
-    * Any transaction with the name 'MATTIS' and a large amount (e.g., > €100) is almost certainly 'Investeren'.
-    * Positive amounts are generally 'Inkomen'.
-- DESCRIPTION TRUMPS NAME: Bank descriptions often contain the actual merchant (like 'Albert Heijn' or 'Amazon').
-- LANGUAGE: The category names are in Dutch. The transactions may be Dutch, French, or English. Use your expert context.
+# CRITICAL RULES:
+- **AVOID 'Overig'**: 'Overig' is a fail-state. Only use it if you have absolutely NO IDEA what the transaction is. If you have a reasonable guess (even 51% sure), use the specific category.
+- **OVERWRITE CATEGORY**: If you are more than 50% confident (> 0.5), you MUST assign the specific category. 
+- **EXACT MATCH**: You MUST use one of the exact category names provided.
+- **MERCHANT NAMES**: Use well-known merchant names (e.g., 'Colruyt', 'Telenet', 'Netflix') if found.
+
+# USER SPECIFIC HINTS:
+- 'MATTIS' with amount > 100 is likely 'Investeren'.
+- Positive amounts are 'Inkomen' unless it's a refund.
+- 'Bancontact' or 'Maestro' usually implies 'Eten & Drinken' or 'Shopping' depending on the merchant.
 
 # OUTPUT FORMAT:
 Output ONLY a valid JSON array of objects.
