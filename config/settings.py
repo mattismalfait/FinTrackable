@@ -16,6 +16,9 @@ SUPABASE_KEY = os.getenv("SUPABASE_KEY", "")
 
 # AI Configuration
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", os.getenv("GOOGLE_API_KEY", ""))
+HF_TOKEN = os.getenv("HF_TOKEN", "")
+HF_MODEL = os.getenv("HF_MODEL", "moonshotai/Kimi-K2-Instruct-0905")
+HF_BASE_URL = "https://router.huggingface.co/v1"
 
 
 # Application Settings

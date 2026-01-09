@@ -1,0 +1,125 @@
+<div id="fintrackable-root" class="min-h-screen bg-white">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&amp;display=swap"
+        rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --charcoal: #1a1a1a;
+            --border: #f1f1f1;
+            --soft-gray: #F8FAF8;
+        }
+
+        #fintrackable-root {
+            font-family: 'Manrope', sans-serif;
+            color: var(--charcoal);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+
+        .refined-card {
+            border: 1px solid var(--border);
+            background-color: white;
+            transition: all 0.2s ease;
+        }
+
+        .slim-progress-bg {
+            background-color: var(--soft-gray);
+        }
+
+        [data-testid="stAppViewBlockContainer"] {
+            padding: 0 !important;
+            max-width: 100% !important;
+        }
+
+        [data-testid="stHeader"],
+        footer {
+            display: none !important;
+        }
+
+        header {
+            position: sticky !important;
+            top: 0;
+            z-index: 50;
+        }
+
+        .bg-primary {
+            background-color: #6366f1 !important;
+        }
+
+        .text-primary {
+            color: #6366f1 !important;
+        }
+
+        .border-primary {
+            border-color: #6366f1 !important;
+        }
+    </style>
+    {% block styles %}{% endblock %}
+    {% block header %}
+    <header class="bg-white border-b border-gray-100 px-6 py-4 sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-10">
+                <div class="flex items-center gap-2">
+                    <div class="w-7 h-7 bg-primary rounded flex items-center justify-center text-white">
+                        <span class="material-symbols-outlined text-sm">account_balance_wallet</span>
+                    </div>
+                    <h2 class="text-lg font-extrabold tracking-tight text-gray-900">FinTrackable</h2>
+                </div>
+                <nav class="hidden md:flex items-center gap-8">
+                    <a class="text-xs font-bold uppercase tracking-widest text-gray-400 hover:text-gray-900 transition-colors"
+                        href="/?nav=home">Product</a>
+                    <a class="text-xs font-bold uppercase tracking-widest text-gray-400 hover:text-gray-900 transition-colors"
+                        href="/?nav=about">About Us</a>
+                    <a class="text-xs font-bold uppercase tracking-widest text-gray-400 hover:text-gray-900 transition-colors"
+                        href="/?nav=pricing">Pricing</a>
+                    <a class="text-xs font-bold uppercase tracking-widest text-gray-400 hover:text-gray-900 transition-colors"
+                        href="#">Security</a>
+                </nav>
+            </div>
+            <div class="flex items-center gap-4">
+                {% if is_authenticated %}
+                <a href="/"
+                    class="bg-primary text-white text-xs font-bold py-2.5 px-6 rounded-lg transition-all hover:bg-indigo-700">Go
+                    to Dashboard</a>
+                {% else %}
+                <a href="/?nav=login"
+                    class="text-xs font-bold uppercase tracking-widest text-gray-900 px-4 py-2 hover:bg-gray-50 rounded-lg transition-all">Sign
+                    In</a>
+                <a href="/?nav=login"
+                    class="bg-gray-900 text-white text-xs font-bold py-2.5 px-6 rounded-lg transition-all hover:bg-black inline-flex items-center justify-center">Get
+                    Started</a>
+                {% endif %}
+            </div>
+        </div>
+    </header>
+    {% endblock %}
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+    {% block footer %}
+    <footer class="max-w-6xl mx-auto px-6 py-12 border-t border-gray-100 mt-12">
+        <div
+            class="flex flex-col md:flex-row justify-between items-center text-[10px] font-black uppercase tracking-widest text-gray-300 gap-6">
+            <div class="flex items-center gap-2">
+                <div class="w-4 h-4 bg-gray-100 rounded flex items-center justify-center">
+                    <span class="material-symbols-outlined text-[10px]">account_balance_wallet</span>
+                </div>
+                <p>© 2024 FinTrackable — Pure Finance Automation</p>
+            </div>
+            <div class="flex gap-8">
+                <a class="hover:text-gray-900 transition-colors" href="#">Security</a>
+                <a class="hover:text-gray-900 transition-colors" href="#">Support</a>
+                <a class="hover:text-gray-900 transition-colors" href="#">Privacy</a>
+                <a class="hover:text-gray-900 transition-colors" href="#">Terms</a>
+            </div>
+        </div>
+    </footer>
+    {% endblock %}
+</div>

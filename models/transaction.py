@@ -48,7 +48,7 @@ class Transaction(BaseModel):
     
     def to_dict(self) -> dict:
         """Convert transaction to dictionary for database insertion."""
-        return {
+        d = {
             "datum": self.datum.isoformat(),
             "bedrag": float(self.bedrag),
             "naam_tegenpartij": self.naam_tegenpartij,
@@ -56,12 +56,15 @@ class Transaction(BaseModel):
             "categorie_id": self.categorie_id,
             "is_confirmed": self.is_confirmed,
             "is_lopende_rekening": self.is_lopende_rekening,
-            "hash": self.hash or self.generate_hash(),
-            "ai_name": self.ai_name,
-            "ai_reasoning": self.ai_reasoning,
-            "ai_confidence": self.ai_confidence,
-            "ai_category": self.ai_category
+            "hash": self.hash or self.generate_hash()
         }
+        
+        # Only add AI metadata if it exists
+        if self.ai_name: d["ai_name"] = self.ai_name
+        if self.ai_reasoning: d["ai_reasoning"] = self.ai_reasoning
+        if self.ai_confidence is not None: d["ai_confidence"] = self.ai_confidence
+        
+        return d
 
     
     def is_income(self) -> bool:

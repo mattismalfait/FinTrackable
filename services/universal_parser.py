@@ -11,11 +11,11 @@ import streamlit as st
 from typing import List, Tuple, Optional, Dict
 from decimal import Decimal
 from datetime import date, datetime
-from google import genai
+from datetime import date, datetime
 
 from models.transaction import Transaction
-from config.settings import GEMINI_API_KEY
 from utils.text_cleaner import clean_transaction_description
+from utils.ai_client import AIClient
 
 logger = logging.getLogger(__name__)
 
@@ -25,11 +25,8 @@ class UniversalParser:
     Identifies column mapping via AI for every file with zero hardcoded assumptions.
     """
     
-    def __init__(self, api_key: str = GEMINI_API_KEY):
-        self.client = None
-        if api_key:
-            self.client = genai.Client(api_key=api_key)
-            self.model_name = 'gemini-flash-latest'
+    def __init__(self):
+        self.ai = AIClient()
         
         # Internal fields we want to map to
         self.target_fields = {
@@ -152,8 +149,8 @@ class UniversalParser:
 
     def _get_ai_mapping(self, columns: List[str], sample_rows: List[Dict]) -> Tuple[Optional[Dict], str]:
         """Use AI to identify column meanings. Returns (mapping_dict, raw_response_text)."""
-        if not self.client:
-            return None, "AI-client niet geïnitialiseerd (API key mist?)"
+        if not self.ai.enabled:
+            return None, "AI-client niet geïnitialiseerd (API key of HF Token mist?)"
 
         # Clean sample data for JSON
         def serializer(obj):
@@ -161,6 +158,11 @@ class UniversalParser:
             if hasattr(obj, 'isoformat'): return obj.isoformat()
             return str(obj)
 
+        prompt = f"""
+        # ... (prompt remains same) ...
+        """
+        # Re-using the logic from the original file but updated for self.ai
+        # I'll keep the full prompt for correctness
         prompt = f"""
 You are an expert at analyzing bank transaction files. Given the following column headers and a few sample rows, identify which columns map to our database fields.
 
@@ -195,11 +197,8 @@ JSON OUTPUT FORMAT:
 """
         raw_text = ""
         try:
-            response = self.client.models.generate_content(
-                model=self.model_name,
-                contents=prompt
-            )
-            raw_text = response.text.strip()
+            raw_text = self.ai.generate_content(prompt)
+            raw_text = raw_text.strip()
             
             # Robust JSON extraction
             import re

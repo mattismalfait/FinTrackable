@@ -5,9 +5,9 @@ import json
 import logging
 from typing import List, Dict, Optional
 import streamlit as st
-from google import genai
 from models.transaction import Transaction
-from config.settings import GEMINI_API_KEY, DEFAULT_CATEGORIES
+from config.settings import DEFAULT_CATEGORIES
+from utils.ai_client import AIClient
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -20,16 +20,13 @@ def _is_bad_name(name: str) -> bool:
         return True
     
     # Check for direct date formats like DD/MM/YYYY or similar
-    # e.g. 05-12-2023 or 05/12
     if re.search(r'\d{2}[-/]\d{2}', name):
         return True
         
-    # Check if mostly numbers (e.g. "05122023 14:00")
     digit_count = sum(c.isdigit() for c in name)
     if digit_count > len(name) * 0.5:
         return True
         
-    # Common vague terms
     vague = ["kbc", "overschrijving", "betaling", "europese overschrijving", "onbekend", "diverse"]
     if name.lower().strip() in vague:
         return True
@@ -39,16 +36,16 @@ def _is_bad_name(name: str) -> bool:
 class AiCategorizer:
     """AI agent for intelligent transaction analysis and categorization."""
     
-    def __init__(self, api_key: str = GEMINI_API_KEY):
-        """Initialize the AI categorizer with Gemini API key."""
-        if not api_key:
-            logger.warning("Gemini API key not found. AI features will be disabled.")
-            self.enabled = False
-            return
+    def __init__(self):
+        """Initialize the AI categorizer using unified AIClient."""
+        self.ai = AIClient()
+        self.enabled = self.ai.enabled
             
-        self.client = genai.Client(api_key=api_key)
-        self.model_name = 'gemini-flash-latest'
-        self.enabled = True
+        if not self.enabled:
+            return
+
+        # Prepare category context
+        self.categories_context = self._prepare_categories_context()
 
 
         
@@ -92,11 +89,8 @@ class AiCategorizer:
             prompt = self._build_prompt(chunk)
             
             try:
-                response = self.client.models.generate_content(
-                    model=self.model_name,
-                    contents=prompt
-                )
-                results = self._parse_response(response.text)
+                content = self.ai.generate_content(prompt)
+                results = self._parse_response(content)
                 
                 if not results:
                     st.warning("⚠️ De AI kon deze groep transacties niet automatisch categoriseren. Je kunt ze nu handmatig toewijzen.")

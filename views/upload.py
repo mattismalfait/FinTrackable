@@ -17,16 +17,23 @@ from utils.ui.template_loader import load_template
 def show_upload_page():
     """Display CSV upload and import interface."""
     
-    # Initialize session state if not present
+    # Initialize all session state keys at the entry point
     if 'upload_step' not in st.session_state:
         st.session_state['upload_step'] = 'upload'
+    if 'parsed_transactions' not in st.session_state:
+        st.session_state['parsed_transactions'] = None
+    if 'suggested_categories' not in st.session_state:
+        st.session_state['suggested_categories'] = None
+    if 'temp_approved_categories' not in st.session_state:
+        st.session_state['temp_approved_categories'] = {}
     
     # Custom Stepper HTML using templates
     steps = ["Uploaden", "Controleren", "Importeren"]
     current_step_idx = 0
-    if st.session_state['upload_step'] == 'review_categories':
+    step = st.session_state['upload_step']
+    if step == 'review_categories':
         current_step_idx = 1
-    elif st.session_state['upload_step'] == 'import':
+    elif step == 'import':
         current_step_idx = 2
         
     container_template = load_template("components/stepper.html")
@@ -56,15 +63,7 @@ def show_upload_page():
         *Bijv. 'Saxo' wordt herkend als 'Investeren', en 'Delhaize' als 'Eten & Drinken'.*
         """)
     
-    #Initialize session state for upload workflow
-    if 'upload_step' not in st.session_state:
-        st.session_state['upload_step'] = 'upload'
-    if 'parsed_transactions' not in st.session_state:
-        st.session_state['parsed_transactions'] = None
-    if 'suggested_categories' not in st.session_state:
-        st.session_state['suggested_categories'] = None
-    if 'approved_categories' in st.session_state:
-        st.session_state['temp_approved_categories'] = st.session_state.get('temp_approved_categories', {})
+    # Step logic continues after UI setup
 
     
     # Show appropriate step
@@ -184,7 +183,7 @@ def show_category_review():
     st.subheader("🤖 AI Analyse Resultaten")
     st.markdown("De AI agent heeft je transacties geanalyseerd. Hieronder zie je de voorgestelde categorisatie:")
     
-    transactions = st.session_state['parsed_transactions']
+    transactions = st.session_state.get('parsed_transactions', [])
     if not transactions:
         st.error("Geen transacties gevonden om te beoordelen")
         return
@@ -269,7 +268,8 @@ def show_category_review():
 
     
     # Show custom categories if any
-    if st.session_state['temp_approved_categories']:
+    temp_cats = st.session_state.get('temp_approved_categories', {})
+    if temp_cats:
         st.markdown("### Eigen Categorieën:")
         for custom_name, custom_data in st.session_state['temp_approved_categories'].items():
             col1, col2 = st.columns([1, 4])
@@ -308,7 +308,7 @@ def show_category_review():
             if submitted:
                 if not custom_name:
                     st.error("Vul een naam in")
-                elif custom_name in suggested_cats or custom_name in st.session_state['temp_approved_categories']:
+                elif custom_name in db_category_names or custom_name in st.session_state['temp_approved_categories']:
                     st.error(f"Categorie '{custom_name}' bestaat al")
                 else:
                     st.session_state['temp_approved_categories'][custom_name] = {

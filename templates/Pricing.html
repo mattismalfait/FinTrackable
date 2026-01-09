@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Pricing | FinTrackable{% endblock %}
+{% block content %}
+<section class="max-w-[1200px] mx-auto px-6 py-20">
+    <div class="text-center space-y-6 mb-16">
+        <h1 class="text-5xl md:text-6xl font-extrabold tracking-tight text-charcoal">Simple, Transparent Pricing</h1>
+        <p class="text-charcoal/50 font-medium max-w-2xl mx-auto text-lg">Choose the plan that fits your financial
+            journey. No hidden fees, just pure personal finance automation.</p>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
+        <div class="refined-card rounded-2xl p-10 flex flex-col h-full">
+            <div class="mb-8">
+                <p class="text-[10px] font-black uppercase tracking-[0.2em] text-charcoal/40 mb-2">Essential</p>
+                <h3 class="text-3xl font-extrabold text-charcoal">Free</h3>
+                <p class="mt-4 text-charcoal/50 text-sm">Perfect for individuals starting their tracking journey.</p>
+            </div>
+            <div class="flex-grow space-y-4 mb-10">
+                <div class="flex items-start gap-3">
+                    <span class="material-symbols-outlined text-emerald-accent text-xl">check_circle</span>
+                    <span class="text-sm font-medium text-charcoal/70">Basic expense tracking</span>
+                </div>
+                <div class="flex items-start gap-3">
+                    <span class="material-symbols-outlined text-emerald-accent text-xl">check_circle</span>
+                    <span class="text-sm font-medium text-charcoal/70">Manual CSV imports</span>
+                </div>
+                <div class="flex items-start gap-3">
+                    <span class="material-symbols-outlined text-emerald-accent text-xl">check_circle</span>
+                    <span class="text-sm font-medium text-charcoal/70">Single account access</span>
+                </div>
+            </div>
+            <a href="/?nav=login"
+                class="w-full py-4 border border-border-refined rounded-xl text-xs font-black uppercase tracking-widest text-charcoal hover:bg-empty-bar transition-colors flex items-center justify-center">Get
+                Started</a>
+        </div>
+        <div
+            class="refined-card rounded-2xl p-10 flex flex-col h-full border-primary/20 relative shadow-xl shadow-indigo-100/50 scale-105 z-10">
+            <div
+                class="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-white text-[9px] font-black uppercase tracking-[0.2em] px-4 py-1.5 rounded-full">
+                Recommended</div>
+            <div class="mb-8">
+                <p class="text-[10px] font-black uppercase tracking-[0.2em] text-primary mb-2">Automation Pro</p>
+                <div class="flex items-baseline gap-1">
+                    <span class="text-5xl font-extrabold text-charcoal">$12</span>
+                    <span class="text-charcoal/40 text-sm font-bold uppercase tracking-widest">/mo</span>
+                </div>
+                <p class="mt-4 text-charcoal/50 text-sm">Advanced tools for serious wealth builders.</p>
+            </div>
+            <div class="flex-grow space-y-4 mb-10">
+                <div class="flex items-start gap-3">
+                    <span class="material-symbols-outlined text-emerald-accent text-xl">check_circle</span>
+                    <span class="text-sm font-medium text-charcoal">AI Auto-categorization</span>
+                </div>
+                <div class="flex items-start gap-3">
+                    <span class="material-symbols-outlined text-emerald-accent text-xl">check_circle</span>
+                    <span class="text-sm font-medium text-charcoal">Real-time Bank Sync</span>
+                </div>
+                <div class="flex items-start gap-3">
+                    <span class="material-symbols-outlined text-emerald-accent text-xl">check_circle</span>
+                    <span class="text-sm font-medium text-charcoal">Net Worth History</span>
+                </div>
+            </div>
+            <a href="/?nav=login"
+                class="w-full py-4 bg-primary rounded-xl text-xs font-black uppercase tracking-widest text-white hover:bg-indigo-700 transition-all shadow-md shadow-indigo-200 flex items-center justify-center">Upgrade
+                to Pro</a>
+        </div>
+        <div class="refined-card rounded-2xl p-10 flex flex-col h-full">
+            <div class="mb-8">
+                <p class="text-[10px] font-black uppercase tracking-[0.2em] text-charcoal/40 mb-2">Corporate</p>
+                <div class="flex items-baseline gap-1">
+                    <span class="text-5xl font-extrabold text-charcoal">$45</span>
+                    <span class="text-charcoal/40 text-sm font-bold uppercase tracking-widest">/mo</span>
+                </div>
+                <p class="mt-4 text-charcoal/50 text-sm">Scalable solutions for families and teams.</p>
+            </div>
+            <div class="flex-grow space-y-4 mb-10">
+                <div class="flex items-start gap-3">
+                    <span class="material-symbols-outlined text-emerald-accent text-xl">check_circle</span>
+                    <span class="text-sm font-medium text-charcoal/70">Up to 10 sub-users</span>
+                </div>
+                <div class="flex items-start gap-3">
+                    <span class="material-symbols-outlined text-emerald-accent text-xl">check_circle</span>
+                    <span class="text-sm font-medium text-charcoal/70">Advanced Reporting</span>
+                </div>
+                <div class="flex items-start gap-3">
+                    <span class="material-symbols-outlined text-emerald-accent text-xl">check_circle</span>
+                    <span class="text-sm font-medium text-charcoal/70">Priority Support</span>
+                </div>
+            </div>
+            <a href="/?nav=login"
+                class="w-full py-4 border border-border-refined rounded-xl text-xs font-black uppercase tracking-widest text-charcoal hover:bg-empty-bar transition-colors flex items-center justify-center">Contact
+                Sales</a>
+        </div>
+    </div>
+</section>
+{% endblock %}

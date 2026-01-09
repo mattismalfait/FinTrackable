@@ -24,6 +24,14 @@ st.set_page_config(
 main_css = load_template("css/main.css")
 st.markdown(f"<style>{main_css}</style>", unsafe_allow_html=True)
 
+def minify_html(html):
+    """Simple minifier to prevent Streamlit markdown parsing issues."""
+    import re
+    # Remove newlines and extra spaces between tags
+    html = re.sub(r'\s+', ' ', html)
+    html = re.sub(r'>\s+<', '><', html)
+    return html.strip()
+
 def main():
     """Main application function."""
     
@@ -42,8 +50,35 @@ def main():
         """)
         return
     
-    # Check authentication
-    if not is_authenticated():
+    # Public routing logic
+    authenticated = is_authenticated()
+    nav = st.query_params.get("nav", "home") if not authenticated else None
+    
+    # If not authenticated, we MUST show public pages
+    # If authenticated but explicitly requesting a public page via ?nav=
+    force_public = st.query_params.get("nav") is not None
+    
+    if not authenticated or force_public:
+        nav = st.query_params.get("nav", "home")
+        
+        if nav in ["home", "about", "pricing"]:
+            template_map = {
+                "home": "home.html",
+                "about": "about-us.html",
+                "pricing": "Pricing.html"
+            }
+            html = load_template(template_map[nav], is_authenticated=authenticated)
+            # Minify and use st.markdown so navigation links work natively
+            st.markdown(minify_html(html), unsafe_allow_html=True)
+            st.stop()
+        elif nav == "login" and not authenticated:
+            show_auth_page()
+            st.stop()
+            return
+
+    # Normal App Logic
+    if not authenticated:
+        # Fallback if somehow they didn't hit the above
         show_auth_page()
         return
     

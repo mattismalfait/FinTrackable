@@ -28,7 +28,8 @@ def migrate():
         ALTER TABLE public.transactions 
         ADD COLUMN IF NOT EXISTS ai_name text,
         ADD COLUMN IF NOT EXISTS ai_reasoning text,
-        ADD COLUMN IF NOT EXISTS ai_confidence numeric;
+        ADD COLUMN IF NOT EXISTS ai_confidence numeric,
+        ADD COLUMN IF NOT EXISTS ai_category text;
         """
         
         print("Please run the following SQL in your Supabase SQL Editor:")

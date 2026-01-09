@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Secure Access | FinTrackable{% endblock %}
+{% block header %}{% endblock %}
+{% block footer %}{% endblock %}
+{% block styles %}
+<style>
+    .bg-chart-gradient {
+        background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(255, 255, 255, 0) 100%), url('https://images.unsplash.com/photo-1611974717482-4800fa12c3f9?q=80&w=2070&auto=format&fit=crop');
+        background-size: cover;
+        background-position: center;
+    }
+
+    .blur-overlay {
+        backdrop-filter: blur(40px);
+        background: rgba(255, 255, 255, 0.2);
+    }
+</style>
+{% endblock %}
+{% block content %}
+<div class="min-h-screen flex font-sans">
+    <div class="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-charcoal">
+        <div class="absolute inset-0 bg-chart-gradient opacity-60"></div>
+        <div class="absolute inset-0 blur-overlay"></div>
+        <div class="relative z-10 p-16 flex flex-col justify-between w-full">
+            <div class="flex items-center gap-3">
+                <div
+                    class="size-10 bg-primary rounded-xl flex items-center justify-center text-white shadow-lg shadow-primary/20">
+                    <span class="material-symbols-outlined text-xl">account_balance_wallet</span>
+                </div>
+                <h1 class="text-2xl font-extrabold tracking-tight text-white">FinTrackable</h1>
+            </div>
+            <div class="max-w-md">
+                <h2 class="text-6xl font-extrabold text-white tracking-tighter leading-none mb-6">Stay in control.</h2>
+                <p class="text-xl text-white/60 font-medium leading-relaxed">Automate your personal finances with
+                    surgical precision. Join the new standard of wealth management.</p>
+            </div>
+            <div class="flex items-center gap-4 text-[10px] font-black uppercase tracking-[0.2em] text-white/40">
+                <span>Enterprise Grade Security</span>
+                <span class="size-1 rounded-full bg-white/20"></span>
+                <span>Real-time Sync</span>
+            </div>
+        </div>
+        <div
+            class="absolute bottom-[-10%] right-[-10%] w-[80%] h-[60%] border border-white/5 rounded-3xl rotate-[-5deg] bg-white/10 backdrop-blur-xl">
+        </div>
+    </div>
+    <div class="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white">
+        <div class="w-full max-w-[420px] space-y-10 text-center">
+            <div class="space-y-2">
+                <h3 class="text-3xl font-extrabold text-charcoal tracking-tight">Secure Access Login</h3>
+                <p class="text-charcoal/50 font-medium">Enter your credentials to manage your capital.</p>
+            </div>
+            <div class="bg-soft-gray p-8 rounded-2xl border border-border-refined">
+                <p class="text-sm font-medium text-charcoal/60 mb-6">Please use the form below to sign in.</p>
+                <!-- Note: The actual Streamlit form is rendered by Python below this block -->
+            </div>
+            <div class="pt-6">
+                <p class="text-sm font-medium text-charcoal/40">
+                    New to FinTrackable?
+                    <a class="text-charcoal font-extrabold hover:text-primary transition-colors"
+                        href="/?nav=home">Return to Home</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

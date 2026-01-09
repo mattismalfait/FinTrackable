@@ -18,17 +18,25 @@ USERS = {
 }
 
 def show_auth_page():
-    """Display authentication page with Login and Sign-up tabs."""
-    st.title("🏦 FinTrackable")
-    st.subheader("Financiële Administratie Geautomatiseerd")
+    """Display the premium authentication page."""
+    from utils.ui.template_loader import load_template
     
-    tab_login, tab_signup = st.tabs(["🔐 Inloggen", "📝 Registreren"])
+    # We render the login template which includes our base layout
+    html = load_template("login.html")
+    import re
+    minified = re.sub(r'\s+', ' ', html).strip()
+    st.markdown(minified, unsafe_allow_html=True)
     
-    with tab_login:
-        show_login_form()
-    
-    with tab_signup:
-        show_signup_form()
+    # Real functional Streamlit form
+    with st.container():
+        st.markdown("<br><br>", unsafe_allow_html=True)
+        tab_login, tab_signup = st.tabs(["🔐 Login to Dashboard", "📝 Register new account"])
+        
+        with tab_login:
+            show_login_form()
+            
+        with tab_signup:
+            show_signup_form()
 
 def show_login_form():
     """Display login form."""
