@@ -210,9 +210,14 @@ class Analytics:
         yearly_groups = self.df.groupby('year')
         
         for year, group in yearly_groups:
-            income = float(group[group['bedrag'] > 0]['bedrag'].sum())
-            expenses = abs(float(group[group['bedrag'] < 0]['bedrag'].sum()))
-            net = income - expenses
+            # Income: Only from 'Inkomen' category (consistent with get_total_income)
+            income = float(group[group['categorie'] == 'Inkomen']['bedrag'].sum())
+            
+            # Net: Sum of all transactions
+            net = float(group['bedrag'].sum())
+            
+            # Expenses: Income - Net (consistent with get_total_expenses)
+            expenses = income - net
             
             # Investment percentage
             investments = abs(float(group[group['categorie'] == 'Investeren']['bedrag'].sum()))
@@ -220,7 +225,7 @@ class Analytics:
             
             yearly_data[int(year)] = {
                 'income': income,
-                'expenses': expenses,
+                'expenses': abs(expenses),  # Store as positive
                 'net': net,
                 'investment_pct': investment_pct
             }

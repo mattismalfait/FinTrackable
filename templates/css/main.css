@@ -1,22 +1,39 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&display=swap');
 
+/* ============================================ */
+/* DESIGN SYSTEM - FinTrackable                */
+/* Based on design_concepts.html reference      */
+/* ============================================ */
+
+/* === GLOBAL STYLES === */
 html,
 body,
 [class*="css"] {
-    font-family: 'Inter', sans-serif;
+    font-family: 'Manrope', sans-serif;
 }
 
 .main {
-    background-color: #fcfcfd;
+    background-color: #ffffff;
 }
 
-/* Premium Sidebar */
+/* === COLOR SYSTEM === */
+:root {
+    --color-primary: #6366f1;
+    --color-charcoal: #1a1a1a;
+    --color-border-refined: #f1f1f1;
+    --color-empty-bar: #F8FAF8;
+    --color-error: #e11d48;
+    --color-success: #10b981;
+    --color-muted: #64748b;
+}
+
+/* === REFINED SIDEBAR === */
 [data-testid="stSidebar"] {
-    background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+    background: linear-gradient(180deg, #2d3748 0%, #1e293b 100%);
     border-right: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-/* Sidebar Text Visibility Fixes */
+/* Sidebar Text Visibility */
 [data-testid="stSidebar"] .stMarkdown h1,
 [data-testid="stSidebar"] .stMarkdown h2,
 [data-testid="stSidebar"] .stMarkdown h3,
@@ -30,103 +47,186 @@ body,
 [data-testid="stSidebar"] .stMultiSelect label,
 [data-testid="stSidebar"] .stTextInput label,
 [data-testid="stSidebar"] [data-testid="stHeader"] {
-    color: white !important;
+    color: rgba(255, 255, 255, 0.95) !important;
+    font-weight: 600;
 }
 
-/* Specific fix for radio button labels which use spans deep inside */
+/* Sidebar Title - Extra emphasis */
+[data-testid="stSidebar"] h1 {
+    color: white !important;
+    font-weight: 800 !important;
+    letter-spacing: -0.01em;
+}
+
 [data-testid="stSidebar"] div[role="radiogroup"] span {
-    color: white !important;
+    color: rgba(255, 255, 255, 0.95) !important;
+    font-weight: 600;
 }
 
-/* Fix sidebar divider */
 [data-testid="stSidebar"] hr {
-    border-color: rgba(255, 255, 255, 0.2) !important;
+    border-color: rgba(255, 255, 255, 0.15) !important;
+    opacity: 1;
 }
 
-/* Fix sidebar radio buttons and checkboxes to look better on dark */
-[data-testid="stSidebar"] [data-testid="stWidgetLabel"] p {
-    color: rgba(255, 255, 255, 0.9) !important;
-    font-weight: 500;
-}
-
-/* Metrics / Card Styling */
+/* === REFINED CARDS & METRICS === */
 [data-testid="stMetric"] {
     background: white;
     padding: 1.5rem;
-    border-radius: 16px;
-    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-    border: 1px solid #f1f5f9;
-    transition: transform 0.2s ease;
+    border-radius: 1rem;
+    border: 1px solid var(--color-border-refined);
+    transition: all 0.2s ease;
 }
 
 [data-testid="stMetric"]:hover {
-    transform: translateY(-4px);
+    border-color: rgba(26, 26, 26, 0.1);
 }
 
 [data-testid="stMetricValue"] {
-    font-size: 2.2rem !important;
-    font-weight: 700 !important;
-    color: #1e293b !important;
+    font-size: 2rem !important;
+    font-weight: 800 !important;
+    color: var(--color-charcoal) !important;
+    letter-spacing: -0.02em;
 }
 
 [data-testid="stMetricLabel"] {
-    font-weight: 500 !important;
-    color: #64748b !important;
+    font-weight: 700 !important;
+    color: var(--color-muted) !important;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
-    font-size: 0.8rem !important;
+    letter-spacing: 0.1em;
+    font-size: 0.625rem !important;
 }
 
-/* Tabs */
+/* === TABS === */
 .stTabs [data-baseweb="tab-list"] {
-    gap: 8px;
-    background-color: #f1f5f9;
-    padding: 6px;
-    border-radius: 12px;
+    gap: 6px;
+    background-color: white;
+    padding: 4px;
+    border-radius: 0.75rem;
+    border: 1px solid var(--color-border-refined);
 }
 
 .stTabs [data-baseweb="tab"] {
-    border-radius: 8px;
-    padding: 8px 16px;
-    font-weight: 600;
+    border-radius: 0.5rem;
+    padding: 0.5rem 1rem;
+    font-weight: 700;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
     transition: all 0.2s;
     border: none !important;
+    color: rgba(26, 26, 26, 0.4);
 }
 
 .stTabs [aria-selected="true"] {
-    background-color: white !important;
-    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1) !important;
+    background-color: var(--color-primary) !important;
+    color: white !important;
 }
 
-/* Buttons */
+/* === BUTTONS === */
 .stButton>button {
-    border-radius: 10px;
-    font-weight: 600;
-    letter-spacing: 0.02em;
+    border-radius: 0.75rem;
+    font-weight: 700;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
     transition: all 0.2s;
-    height: 3rem;
+    padding: 0.625rem 1.5rem;
+    border: 1px solid var(--color-border-refined);
 }
 
 .stButton>button:hover {
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .stButton>button[kind="primary"] {
-    background-color: #3b82f6;
+    background-color: var(--color-charcoal);
+    color: white;
     border: none;
 }
 
-/* Forms / Inputs */
-.stTextInput input,
-.stSelectbox [data-baseweb="select"] {
-    border-radius: 10px !important;
-    border: 1px solid #e2e8f0 !important;
+.stButton>button[kind="primary"]:hover {
+    background-color: #000000;
 }
 
-/* Expander Glassmorphism */
+.stButton>button[kind="secondary"] {
+    background-color: white;
+    color: var(--color-charcoal);
+}
+
+/* === FORMS & INPUTS === */
+.stTextInput input,
+.stSelectbox [data-baseweb="select"],
+.stNumberInput input {
+    border-radius: 0.75rem !important;
+    border: 1px solid var(--color-border-refined) !important;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.stTextInput input:focus,
+.stSelectbox [data-baseweb="select"]:focus,
+.stNumberInput input:focus {
+    border-color: var(--color-primary) !important;
+    box-shadow: 0 0 0 1px var(--color-primary) !important;
+}
+
+/* === EXPANDERS === */
 .stExpander {
-    border: 1px solid #f1f5f9 !important;
-    border-radius: 16px !important;
+    border: 1px solid var(--color-border-refined) !important;
+    border-radius: 1rem !important;
     overflow: hidden;
     background: white !important;
+}
+
+.stExpander summary {
+    font-weight: 700;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--color-charcoal);
+}
+
+/* === DATA TABLES === */
+.stDataFrame {
+    border: 1px solid var(--color-border-refined) !important;
+    border-radius: 0.75rem !important;
+    overflow: hidden;
+}
+
+/* === PROGRESS BARS === */
+.stProgress>div>div {
+    background-color: var(--color-primary);
+    border-radius: 9999px;
+}
+
+/* === ALERTS & MESSAGES === */
+.stAlert {
+    border-radius: 0.75rem;
+    border: 1px solid var(--color-border-refined);
+}
+
+/* === TYPOGRAPHY ENHANCEMENTS === */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    font-weight: 800;
+    color: var(--color-charcoal);
+    letter-spacing: -0.02em;
+}
+
+p {
+    color: rgba(26, 26, 26, 0.7);
+    font-weight: 500;
+}
+
+/* === CUSTOM UTILITY CLASSES === */
+.refined-card {
+    background: white;
+    border: 1px solid var(--color-border-refined);
+    border-radius: 1rem;
+    padding: 1.5rem;
 }

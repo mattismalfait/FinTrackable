@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Simplified Expense Budgeting | FinTrackable</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&amp;display=swap"
+        rel="stylesheet" />
+    <script id="tailwind-config">
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#6366f1", // Soft Indigo
+                        "over-budget": "#e11d48", // Rose
+                        "empty-bar": "#F8FAF8",
+                        "charcoal": "#1a1a1a",
+                        "border-refined": "#f1f1f1",
+                    },
+                    fontFamily: {
+                        "sans": ["Manrope", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+    <style type="text/tailwindcss">
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            background-color: #ffffff;
+            color: #1a1a1a;
+        }
+        .refined-card {
+            border: 1px solid #f1f1f1;
+            background-color: #ffffff;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen">
+    <header class="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-border-refined px-6 py-4">
+        <div class="max-w-[1200px] mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-10">
+                <div class="flex items-center gap-2">
+                    <div class="size-7 bg-primary rounded flex items-center justify-center text-white">
+                        <span class="material-symbols-outlined text-sm">account_balance_wallet</span>
+                    </div>
+                    <h2 class="text-lg font-extrabold tracking-tight text-charcoal">FinTrackable</h2>
+                </div>
+                <nav class="hidden md:flex items-center gap-8">
+                    <a class="text-xs font-bold uppercase tracking-widest text-charcoal/40 hover:text-charcoal transition-colors"
+                        href="#">Dashboard</a>
+                    <a class="text-xs font-bold uppercase tracking-widest text-primary" href="#">Expense Budgets</a>
+                    <a class="text-xs font-bold uppercase tracking-widest text-charcoal/40 hover:text-charcoal transition-colors"
+                        href="#">Transactions</a>
+                    <a class="text-xs font-bold uppercase tracking-widest text-charcoal/40 hover:text-charcoal transition-colors"
+                        href="#">Reporting</a>
+                </nav>
+            </div>
+            <div class="flex items-center gap-6">
+                <div class="relative hidden sm:block">
+                    <span
+                        class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-charcoal/30 text-base">search</span>
+                    <input
+                        class="bg-white border border-border-refined rounded-lg pl-9 pr-4 py-1.5 text-xs w-48 focus:ring-1 focus:ring-primary focus:border-primary transition-all"
+                        placeholder="Search expenses..." type="text" />
+                </div>
+                <div class="size-8 rounded-full bg-cover bg-center border border-border-refined"
+                    style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCRadhbOrOc2A7cv1alyFYigVI0dS81ayQOU5KtAJQi-Gp9iwPBC7fGHSpF4LF9e7C5pQ1I-mI7NMHpyN8RK-I93dQyp0Mxv4Q2s2xLQVEQSQLT_BEf24qFGMr04yoz5hTr24boMeB0K2qyr_KCCvjIrX8veUT6kPAIXIGtb2XWVE05skljHGG48Z7SOYIWbphkTxnGPpLOrNF0O0xtEDBpnT8Np9kw1mfgUW9hlEGmF8hPlJpsk9q5OFXtOIHHmN-mnY6Cd4dWoDg");'>
+                </div>
+            </div>
+        </div>
+    </header>
+    <main class="max-w-[1200px] mx-auto px-6 py-12 space-y-10">
+        <div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
+            <div class="space-y-2">
+                <h1 class="text-4xl font-extrabold tracking-tight text-charcoal">Expense Budgets</h1>
+                <p class="text-charcoal/50 font-medium">Monitor your spending liquidity and monthly allowances with
+                    precision.</p>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="bg-white p-1 rounded-lg flex items-center border border-border-refined">
+                    <button class="px-4 py-1.5 text-xs font-bold rounded bg-primary text-white">This Month</button>
+                    <button class="px-4 py-1.5 text-xs font-bold text-charcoal/40 hover:text-charcoal">Last
+                        Month</button>
+                </div>
+                <button
+                    class="bg-charcoal text-white text-xs font-bold py-2.5 px-6 rounded-lg transition-all flex items-center gap-2 hover:bg-black">
+                    <span class="material-symbols-outlined text-sm">edit_document</span>
+                    <span>Adjust Budgets</span>
+                </button>
+            </div>
+        </div>
+        <div class="refined-card rounded-2xl p-10">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
+                <div class="space-y-2">
+                    <p class="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Monthly Spending Progress
+                    </p>
+                    <div class="flex items-baseline gap-3">
+                        <span class="text-6xl font-extrabold text-charcoal tracking-tighter">$2,840.50</span>
+                        <span class="text-charcoal/40 text-xl font-medium">/ $4,200.00 allowance</span>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <p class="text-4xl font-extrabold text-primary tracking-tighter">67.6%</p>
+                    <p class="text-[10px] font-bold uppercase tracking-widest text-charcoal/30">Total Utilization</p>
+                </div>
+            </div>
+            <div class="h-1.5 w-full bg-empty-bar rounded-full overflow-hidden">
+                <div class="h-full bg-primary rounded-full transition-all duration-500" style="width: 67.6%;"></div>
+            </div>
+            <div class="mt-6 flex justify-between items-center text-xs font-bold uppercase tracking-widest">
+                <p class="text-charcoal/40">21 days remaining</p>
+                <p class="text-charcoal">$1,359.50 available</p>
+            </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div class="refined-card rounded-xl p-6 transition-colors hover:border-charcoal/10">
+                <div class="flex justify-between items-center mb-8">
+                    <div class="flex items-center gap-3">
+                        <div
+                            class="size-8 rounded border border-border-refined flex items-center justify-center text-charcoal/60">
+                            <span class="material-symbols-outlined text-lg">shopping_cart</span>
+                        </div>
+                        <h3 class="text-sm font-extrabold text-charcoal uppercase tracking-wider">Groceries</h3>
+                    </div>
+                </div>
+                <div class="space-y-6">
+                    <div class="flex justify-between">
+                        <div>
+                            <p class="text-charcoal/40 text-[10px] font-bold uppercase tracking-wider mb-1">Spent</p>
+                            <p class="text-2xl font-extrabold text-charcoal">$450.00</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-charcoal/40 text-[10px] font-bold uppercase tracking-wider mb-1">Remaining
+                            </p>
+                            <p class="text-2xl font-extrabold text-charcoal">$150.00</p>
+                        </div>
+                    </div>
+                    <div class="h-1 w-full bg-empty-bar rounded-full overflow-hidden">
+                        <div class="h-full bg-primary" style="width: 75%;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="refined-card rounded-xl p-6 transition-colors hover:border-charcoal/10">
+                <div class="flex justify-between items-center mb-8">
+                    <div class="flex items-center gap-3">
+                        <div
+                            class="size-8 rounded border border-border-refined flex items-center justify-center text-charcoal/60">
+                            <span class="material-symbols-outlined text-lg">home</span>
+                        </div>
+                        <h3 class="text-sm font-extrabold text-charcoal uppercase tracking-wider">Rent &amp; Housing
+                        </h3>
+                    </div>
+                </div>
+                <div class="space-y-6">
+                    <div class="flex justify-between">
+                        <div>
+                            <p class="text-charcoal/40 text-[10px] font-bold uppercase tracking-wider mb-1">Spent</p>
+                            <p class="text-2xl font-extrabold text-charcoal">$1,800.00</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-charcoal/40 text-[10px] font-bold uppercase tracking-wider mb-1">Remaining
+                            </p>
+                            <p class="text-2xl font-extrabold text-charcoal/20">$0.00</p>
+                        </div>
+                    </div>
+                    <div class="h-1 w-full bg-empty-bar rounded-full overflow-hidden">
+                        <div class="h-full bg-primary" style="width: 100%;"></div>
+                    </div>
+                </div>
+            </div>
+            <div
+                class="refined-card rounded-xl p-6 border-over-budget/20 transition-colors hover:border-over-budget/40">
+                <div class="flex justify-between items-center mb-8">
+                    <div class="flex items-center gap-3">
+                        <div
+                            class="size-8 rounded border border-over-budget/20 flex items-center justify-center text-over-budget">
+                            <span class="material-symbols-outlined text-lg">restaurant</span>
+                        </div>
+                        <h3 class="text-sm font-extrabold text-charcoal uppercase tracking-wider">Dining Out</h3>
+                    </div>
+                    <span
+                        class="text-over-budget text-[9px] font-black uppercase tracking-widest border border-over-budget/20 px-2 py-0.5 rounded">Limit
+                        Exceeded</span>
+                </div>
+                <div class="space-y-6">
+                    <div class="flex justify-between">
+                        <div>
+                            <p class="text-charcoal/40 text-[10px] font-bold uppercase tracking-wider mb-1">Spent</p>
+                            <p class="text-2xl font-extrabold text-over-budget">$425.00</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-charcoal/40 text-[10px] font-bold uppercase tracking-wider mb-1">Deficit</p>
+                            <p class="text-2xl font-extrabold text-over-budget">-$75.00</p>
+                        </div>
+                    </div>
+                    <div class="h-1 w-full bg-empty-bar rounded-full overflow-hidden">
+                        <div class="h-full bg-over-budget" style="width: 100%;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="refined-card rounded-xl p-6 transition-colors hover:border-charcoal/10">
+                <div class="flex justify-between items-center mb-8">
+                    <div class="flex items-center gap-3">
+                        <div
+                            class="size-8 rounded border border-border-refined flex items-center justify-center text-charcoal/60">
+                            <span class="material-symbols-outlined text-lg">commute</span>
+                        </div>
+                        <h3 class="text-sm font-extrabold text-charcoal uppercase tracking-wider">Transport</h3>
+                    </div>
+                </div>
+                <div class="space-y-6">
+                    <div class="flex justify-between">
+                        <div>
+                            <p class="text-charcoal/40 text-[10px] font-bold uppercase tracking-wider mb-1">Spent</p>
+                            <p class="text-2xl font-extrabold text-charcoal">$120.00</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-charcoal/40 text-[10px] font-bold uppercase tracking-wider mb-1">Remaining
+                            </p>
+                            <p class="text-2xl font-extrabold text-charcoal">$180.00</p>
+                        </div>
+                    </div>
+                    <div class="h-1 w-full bg-empty-bar rounded-full overflow-hidden">
+                        <div class="h-full bg-primary" style="width: 40%;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="refined-card rounded-xl p-6 transition-colors hover:border-charcoal/10">
+                <div class="flex justify-between items-center mb-8">
+                    <div class="flex items-center gap-3">
+                        <div
+                            class="size-8 rounded border border-border-refined flex items-center justify-center text-charcoal/60">
+                            <span class="material-symbols-outlined text-lg">bolt</span>
+                        </div>
+                        <h3 class="text-sm font-extrabold text-charcoal uppercase tracking-wider">Utilities</h3>
+                    </div>
+                </div>
+                <div class="space-y-6">
+                    <div class="flex justify-between">
+                        <div>
+                            <p class="text-charcoal/40 text-[10px] font-bold uppercase tracking-wider mb-1">Spent</p>
+                            <p class="text-2xl font-extrabold text-charcoal">$245.50</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-charcoal/40 text-[10px] font-bold uppercase tracking-wider mb-1">Remaining
+                            </p>
+                            <p class="text-2xl font-extrabold text-charcoal">$54.50</p>
+                        </div>
+                    </div>
+                    <div class="h-1 w-full bg-empty-bar rounded-full overflow-hidden">
+                        <div class="h-full bg-primary" style="width: 82%;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="refined-card rounded-xl p-6 transition-colors hover:border-charcoal/10">
+                <div class="flex justify-between items-center mb-8">
+                    <div class="flex items-center gap-3">
+                        <div
+                            class="size-8 rounded border border-border-refined flex items-center justify-center text-charcoal/60">
+                            <span class="material-symbols-outlined text-lg">self_care</span>
+                        </div>
+                        <h3 class="text-sm font-extrabold text-charcoal uppercase tracking-wider">Lifestyle</h3>
+                    </div>
+                </div>
+                <div class="space-y-6">
+                    <div class="flex justify-between">
+                        <div>
+                            <p class="text-charcoal/40 text-[10px] font-bold uppercase tracking-wider mb-1">Spent</p>
+                            <p class="text-2xl font-extrabold text-charcoal">$150.00</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-charcoal/40 text-[10px] font-bold uppercase tracking-wider mb-1">Remaining
+                            </p>
+                            <p class="text-2xl font-extrabold text-charcoal">$100.00</p>
+                        </div>
+                    </div>
+                    <div class="h-1 w-full bg-empty-bar rounded-full overflow-hidden">
+                        <div class="h-full bg-primary" style="width: 60%;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="flex flex-col lg:flex-row gap-8">
+            <div class="flex-1 refined-card rounded-2xl p-8">
+                <h4 class="text-xs font-black uppercase tracking-[0.2em] mb-8 text-charcoal">Liquidity Insights</h4>
+                <div class="space-y-4">
+                    <div class="flex gap-4 p-5 rounded-xl border border-border-refined">
+                        <div class="size-10 rounded-full bg-primary/5 flex items-center justify-center flex-shrink-0">
+                            <span class="material-symbols-outlined text-primary text-xl">trending_up</span>
+                        </div>
+                        <div>
+                            <p class="text-sm font-extrabold text-charcoal">High Spending Velocity</p>
+                            <p class="text-sm text-charcoal/50 font-medium">Dining Out is trending 20% higher than last
+                                week. You may reach the limit early.</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-4 p-5 rounded-xl border border-border-refined">
+                        <div class="size-10 rounded-full bg-charcoal/5 flex items-center justify-center flex-shrink-0">
+                            <span class="material-symbols-outlined text-charcoal/40 text-xl">event_upcoming</span>
+                        </div>
+                        <div>
+                            <p class="text-sm font-extrabold text-charcoal">Upcoming Fixed Costs</p>
+                            <p class="text-sm text-charcoal/50 font-medium">Your Internet subscription ($65.00) is
+                                scheduled for deduction on the 15th.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="lg:w-1/3 refined-card rounded-2xl p-8">
+                <div class="flex justify-between items-center mb-8">
+                    <h4 class="text-[10px] font-black uppercase tracking-[0.2em] text-charcoal/50">Recent Activity</h4>
+                    <span class="material-symbols-outlined text-charcoal/20 text-xl">history</span>
+                </div>
+                <div class="space-y-6">
+                    <div class="flex items-start gap-4">
+                        <div class="mt-1.5 size-1.5 rounded-full bg-primary flex-shrink-0"></div>
+                        <div class="flex-1">
+                            <p class="text-xs font-bold text-charcoal uppercase tracking-wider">Grocery Allowance
+                                Increase</p>
+                            <p class="text-[10px] font-bold text-charcoal/30 uppercase mt-1">+$50.00 • Today</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-4">
+                        <div class="mt-1.5 size-1.5 rounded-full bg-primary flex-shrink-0"></div>
+                        <div class="flex-1">
+                            <p class="text-xs font-bold text-charcoal uppercase tracking-wider">Dining Reallocation</p>
+                            <p class="text-[10px] font-bold text-charcoal/30 uppercase mt-1">From Entertainment •
+                                Yesterday</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-4">
+                        <div class="mt-1.5 size-1.5 rounded-full bg-border-refined flex-shrink-0"></div>
+                        <div class="flex-1">
+                            <p class="text-xs font-bold text-charcoal/40 uppercase tracking-wider">Transport Reset</p>
+                            <p class="text-[10px] font-bold text-charcoal/30 uppercase mt-1">Cycle restart • Oct 1st</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    <footer class="max-w-[1200px] mx-auto px-6 py-12 border-t border-border-refined mt-12">
+        <div
+            class="flex flex-col md:flex-row justify-between items-center text-[10px] font-black uppercase tracking-widest text-charcoal/30 gap-6">
+            <p>© 2024 FinTrackable — Pure Expense Tracking</p>
+            <div class="flex gap-8">
+                <a class="hover:text-charcoal transition-colors" href="#">Security</a>
+                <a class="hover:text-charcoal transition-colors" href="#">Support</a>
+                <a class="hover:text-charcoal transition-colors" href="#">Privacy</a>
+            </div>
+        </div>
+    </footer>
+
+</body>
+
+</html>

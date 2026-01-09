@@ -1,14 +1,17 @@
 <div
-    style="background: white; padding: 12px; border-radius: 12px; border: 1px solid #f1f5f9; margin-bottom: 10px; display: flex; align-items: center; gap: 12px;">
-    <div style="background: {cat_color}; width: 8px; height: 40px; border-radius: 4px;"></div>
+    style="background: white; padding: 16px; border-radius: 0.75rem; border: 1px solid #f1f1f1; margin-bottom: 12px; display: flex; align-items: center; gap: 12px; transition: all 0.2s;">
+    <div style="background: {cat_color}; width: 6px; height: 44px; border-radius: 4px;"></div>
     <div style="flex: 1;">
-        <div style="font-weight: 600; color: #1e293b; font-size: 0.95rem;">{counterparty}</div>
-        <div style="color: #64748b; font-size: 0.8rem;">{date}</div>
+        <div style="font-weight: 700; color: #1a1a1a; font-size: 0.875rem; margin-bottom: 4px;">{counterparty}</div>
+        <div
+            style="color: #64748b; font-size: 0.625rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">
+            {date}</div>
     </div>
     <div style="text-align: right;">
-        <div style="font-weight: 700; color: #ef4444; font-size: 1rem;">€{amount:,.2f}</div>
+        <div style="font-weight: 800; color: #e11d48; font-size: 1.125rem; letter-spacing: -0.02em;">€{amount:,.2f}
+        </div>
         <div
-            style="background: #f1f5f9; color: #475569; padding: 2px 8px; border-radius: 6px; font-size: 0.65rem; font-weight: 600; display: inline-block;">
+            style="background: #F8FAF8; color: #64748b; padding: 4px 10px; border-radius: 6px; font-size: 0.625rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; display: inline-block; margin-top: 4px;">
             {cat_name}</div>
     </div>
 </div>
