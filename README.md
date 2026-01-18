@@ -18,7 +18,7 @@ Een volledige, productie-klare financiële administratie-applicatie die KBC bank
 
 ### 🏷️ Automatische Categorisatie
 - Intelligente regelgebaseerde categorisatie op basis van tegenpartij en omschrijving
-- Standaard categorieën: Investeren, Eten, Gym, Inkomen, Vrije Tijd, Reizen, Wonen
+- Standaard categorieën: Investeren, Eten&Drinken, Transport, Inkomen, Vrije Tijd & Feest, Reizen, Wonen, Kleding, Sport&Gezondheid, Overig
 - Leerbaar systeem: onbekende transacties vragen om input en onthouden je keuze
 - Handmatige aanpassing van categorisatieregels mogelijk
 

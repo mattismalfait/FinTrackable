@@ -30,7 +30,7 @@ def show_auth_page():
     # Real functional Streamlit form
     with st.container():
         st.markdown("<br><br>", unsafe_allow_html=True)
-        tab_login, tab_signup = st.tabs(["🔐 Login to Dashboard", "📝 Register new account"])
+        tab_login, tab_signup = st.tabs([" Login to Dashboard", " Register new account"])
         
         with tab_login:
             show_login_form()
@@ -61,7 +61,7 @@ def show_login_form():
                     first_name=user_record["first_name"],
                     second_name=user_record["second_name"]
                 )
-                st.success("✅ Succesvol ingelogd!")
+                st.success(" Succesvol ingelogd!")
                 st.rerun()
             else:
                 st.error("Ongeldige e-mail of wachtwoord.")
@@ -104,7 +104,7 @@ def show_signup_form():
                     first_name=user_record["first_name"],
                     second_name=user_record["second_name"]
                 )
-                st.success("✅ Account succesvol aangemaakt!")
+                st.success(" Account succesvol aangemaakt!")
                 st.rerun()
 
 def logout():

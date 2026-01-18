@@ -52,7 +52,7 @@ def show_upload_page():
     
     st.markdown(container_template.format(steps_content=steps_content), unsafe_allow_html=True)
     
-    with st.expander("💡 Hoe werkt de categorisatie?", expanded=False):
+    with st.expander(" Hoe werkt de categorisatie?", expanded=False):
         st.info("""
         **FinTrackable gebruikt een slimme combinatie van regels:**
         
@@ -98,11 +98,11 @@ def show_file_upload():
             
             if messages:
                 for msg in messages:
-                    if "✅" in msg:
+                    if "" in msg:
                         st.success(msg)
-                    elif "⚠️" in msg:
+                    elif "" in msg:
                         st.info(msg)
-                    elif "❌" in msg:
+                    elif "" in msg:
                         st.error(msg)
             
             if not raw_transactions:
@@ -134,25 +134,25 @@ def show_file_upload():
             st.session_state['current_transactions'] = unique_transactions
             
             if duplicate_count > 0:
-                st.info(f"ℹ️ **{duplicate_count}** dubbele transacties zijn eruit gefilterd.")
+                st.info(f" **{duplicate_count}** dubbele transacties zijn eruit gefilterd.")
             
             if not unique_transactions:
-                st.warning("⚠️ Alle transacties in dit bestand staan al in het systeem.")
+                st.warning(" Alle transacties in dit bestand staan al in het systeem.")
                 return
                 
-            st.success(f"✅ {len(unique_transactions)} nieuwe transacties klaar voor analyse")
+            st.success(f" {len(unique_transactions)} nieuwe transacties klaar voor analyse")
             
             # Show preview
-            with st.expander("📋 Voorbeeld van ingelezen data", expanded=True):
+            with st.expander(" Voorbeeld van ingelezen data", expanded=True):
                 preview_df = pd.DataFrame([{
                     'Datum': t.datum,
-                    'Bedrag': f"€{t.bedrag:,.2f}",
+                    'Bedrag': f"{t.bedrag:,.2f}",
                     'Tegenpartij': t.naam_tegenpartij or '-'
                 } for t in unique_transactions[:10]])
                 st.dataframe(preview_df, use_container_width=True, hide_index=True)
 
             # Analyze and suggest categories using AI agent
-            if st.button("AI Agent: Analyseer & Categoriseer 🤖", type="primary", use_container_width=True):
+            if st.button("AI Agent: Analyseer & Categoriseer ", type="primary", use_container_width=True):
                 ai_categorizer = AiCategorizer()
                 
                 with st.spinner("De AI agent analyseert de transacties..."):
@@ -165,14 +165,14 @@ def show_file_upload():
                     processed_txns = ai_categorizer.analyze_batch(txns_to_analyze)
                 
                 if not processed_txns:
-                    st.error("❌ Er ging iets mis bij de AI-analyse. Probeer het opnieuw.")
+                    st.error(" Er ging iets mis bij de AI-analyse. Probeer het opnieuw.")
                 else:
                     st.session_state['parsed_transactions'] = processed_txns
                     st.session_state['upload_step'] = 'review_categories'
                     st.rerun()
 
     # Cancel button at any time during Step 1
-    if st.button("❌ Annuleren & Terug naar Dashboard", use_container_width=True):
+    if st.button("Annuleren & Terug naar Dashboard", use_container_width=True):
         st.session_state['page'] = 'dashboard'
         st.rerun()
 
@@ -180,7 +180,7 @@ def show_file_upload():
 def show_category_review():
     """Step 2: Review and approve AI suggested categories."""
     
-    st.subheader("🤖 AI Analyse Resultaten")
+    st.subheader("AI Analyse Resultaten")
     st.markdown("De AI agent heeft je transacties geanalyseerd. Hieronder zie je de voorgestelde categorisatie:")
     
     transactions = st.session_state.get('parsed_transactions', [])
@@ -208,20 +208,20 @@ def show_category_review():
     # Display summary cards
     for cat_name, data in cat_summary.items():
         avg_conf = data["confidence_avg"] / data["count"]
-        with st.expander(f"**{cat_name}** ({data['count']} transacties | €{data['total']:,.2f})", expanded=avg_conf < 0.8):
+        with st.expander(f"**{cat_name}** ({data['count']} transacties | {data['total']:,.2f})", expanded=avg_conf < 0.8):
             st.write(f"**Gemiddelde betrouwbaarheid:** {avg_conf:.1%}")
             st.write(f"**Voorbeelden:** {', '.join(data['examples'])}")
             
             # Show a few transactions with reasoning
             sub_tx = [t for t in transactions if t.categorie == cat_name][:5]
             for t in sub_tx:
-                st.caption(f"📝 {t.naam_tegenpartij}: {t.ai_reasoning} (Vertrouwen: {t.ai_confidence:.0%})")
+                st.caption(f" {t.naam_tegenpartij}: {t.ai_reasoning} (Vertrouwen: {t.ai_confidence:.0%})")
 
         
         st.markdown("---")
     
     # Detailed Table View
-    with st.expander("🔍 Gedetailleerd Overzicht (Alle Transacties)", expanded=False):
+    with st.expander(" Gedetailleerd Overzicht (Alle Transacties)", expanded=False):
         df_details = pd.DataFrame([{
             "Datum": t.datum,
             "Tegenpartij": t.naam_tegenpartij,
@@ -245,11 +245,11 @@ def show_category_review():
             column_config={
                 "Datum": st.column_config.DateColumn("Datum", disabled=True),
                 "Tegenpartij": st.column_config.TextColumn("Tegenpartij"),
-                "Bedrag": st.column_config.NumberColumn("Bedrag", format="€ %.2f", disabled=True),
+                "Bedrag": st.column_config.NumberColumn("Bedrag", format=" %.2f", disabled=True),
                 "Categorie": st.column_config.SelectboxColumn("Categorie", options=db_category_names, required=True),
-                "AI Naam": st.column_config.TextColumn("🤖 AI Naam", disabled=True),
-                "AI Motivatie": st.column_config.TextColumn("🤖 Motivatie", disabled=True),
-                "Vertrouwen": st.column_config.ProgressColumn("🤖 Vertrouwen", format="%.0f%%", min_value=0, max_value=1),
+                "AI Naam": st.column_config.TextColumn(" AI Naam", disabled=True),
+                "AI Motivatie": st.column_config.TextColumn(" Motivatie", disabled=True),
+                "Vertrouwen": st.column_config.ProgressColumn(" Vertrouwen", format="%.0f%%", min_value=0, max_value=1),
                 "Omschrijving": None # Hide description
             },
 
@@ -290,14 +290,14 @@ def show_category_review():
                     st.write(f"**{custom_name}**")
                     st.caption(custom_data.get('description', 'Eigen categorie'))
                 with col_b:
-                    if st.button("🗑️", key=f"del_{custom_name}"):
+                    if st.button("", key=f"del_{custom_name}"):
                         del st.session_state['temp_approved_categories'][custom_name]
                         st.rerun()
             
             st.markdown("---")
     
     # Allow custom category addition
-    with st.expander("➕ Voeg Eigen Categorie Toe"):
+    with st.expander(" Voeg Eigen Categorie Toe"):
         with st.form("add_custom_category"):
             custom_name = st.text_input("Naam*")
             custom_color = st.color_picker("Kleur", "#10b981")
@@ -320,19 +320,19 @@ def show_category_review():
                         'avg_amount': 0,
                         'keywords': []
                     }
-                    st.success(f"✅ Categorie '{custom_name}' toegevoegd")
+                    st.success(f" Categorie '{custom_name}' toegevoegd")
                     st.rerun()
     
     # Navigation buttons
     col1, col2 = st.columns(2)
     
     with col1:
-        if st.button("⬅️ Terug naar Bestand Kiezen", use_container_width=True):
+        if st.button("Terug naar Bestand Kiezen", use_container_width=True):
             st.session_state['upload_step'] = 'upload'
             st.rerun()
     
     with col2:
-        if st.button("✅ Alles Akkoord & Doorgaan", type="primary", use_container_width=True):
+        if st.button("Alles Akkoord & Doorgaan", type="primary", use_container_width=True):
             st.session_state['upload_step'] = 'import'
             st.rerun()
 
@@ -348,28 +348,28 @@ def show_import_confirmation():
     
     transactions = st.session_state['parsed_transactions']
     
-    st.subheader("💾 Importeren")
+    st.subheader("Importeren")
     st.info(f"Klaar om {len(transactions)} transacties te importeren met AI-verrijkte data.")
 
     
     # Show summary
-    with st.expander("📊 Samenvatting", expanded=True):
+    with st.expander(" Samenvatting", expanded=True):
         st.write(f"**Aantal transacties:** {len(transactions)}")
         # Count high vs low confidence
         high_conf = len([t for t in transactions if (t.ai_confidence or 0) >= 0.8])
-        st.write(f"✅ Hoge betrouwbaarheid: {high_conf}")
-        st.write(f"⚠️ Lage betrouwbaarheid: {len(transactions) - high_conf}")
+        st.write(f" Hoge betrouwbaarheid: {high_conf}")
+        st.write(f" Lage betrouwbaarheid: {len(transactions) - high_conf}")
 
     
     col1, col2 = st.columns(2)
     
     with col1:
-        if st.button("⬅️ Terug naar Categorieën", use_container_width=True):
+        if st.button("Terug naar Categorieën", use_container_width=True):
             st.session_state['upload_step'] = 'review_categories'
             st.rerun()
     
     with col2:
-        if st.button("🚀 Importeren!", type="primary", use_container_width=True):
+        if st.button("Importeren!", type="primary", use_container_width=True):
             perform_import(transactions, user.id)
 
 def perform_import(transactions, user_id):
@@ -439,13 +439,13 @@ def perform_import(transactions, user_id):
 
         
         # Show results
-        st.success(f"✅ {result['success']} transacties succesvol geïmporteerd")
+        st.success(f" {result['success']} transacties succesvol geïmporteerd")
         
         if result['skipped'] > 0:
-            st.info(f"ℹ️ {result['skipped']} dubbele transacties overgeslagen")
+            st.info(f" {result['skipped']} dubbele transacties overgeslagen")
         
         if result['errors']:
-            with st.expander(f"❌ {len(result['errors'])} fouten"):
+            with st.expander(f" {len(result['errors'])} fouten"):
                 for error in result['errors']:
                     st.error(error)
         
@@ -456,6 +456,6 @@ def perform_import(transactions, user_id):
         st.session_state.pop('approved_categories', None)
         
         # Navigation
-        if st.button("📊 Ga naar Dashboard"):
+        if st.button("Ga naar Dashboard"):
             st.session_state['page'] = 'dashboard'
             st.rerun()

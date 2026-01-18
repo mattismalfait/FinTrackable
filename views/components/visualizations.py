@@ -37,14 +37,14 @@ def create_monthly_trend_chart(monthly_by_category: pd.DataFrame, category_color
             x=pivot_df.index,
             y=pivot_df[category],  # Allow negative values to plot downwards
             marker_color=category_colors.get(category, '#9ca3af'),
-            hovertemplate='<b>%{fullData.name}</b><br>€%{y:,.2f}<extra></extra>'
+            hovertemplate='<b>%{fullData.name}</b><br>%{y:,.2f}<extra></extra>'
         ))
     
     fig.update_layout(
         title="Maandelijkse Trends per Categorie",
         barmode='relative', # Positive up, negative down
         xaxis_title="Maand",
-        yaxis_title="Bedrag (€)",
+        yaxis_title="Bedrag ()",
         hovermode='x unified',
         height=CHART_CONFIG['height'],
         font=dict(family=CHART_CONFIG['font_family']),
@@ -81,7 +81,7 @@ def create_income_expense_chart(monthly_totals: pd.DataFrame) -> go.Figure:
         x=monthly_totals['month'],
         y=monthly_totals['income'],
         marker_color=THEME_COLORS['income'],
-        hovertemplate='<b>Inkomsten</b><br>€%{y:,.2f}<extra></extra>'
+        hovertemplate='<b>Inkomsten</b><br>%{y:,.2f}<extra></extra>'
     ))
     
     # Expense bars
@@ -90,7 +90,7 @@ def create_income_expense_chart(monthly_totals: pd.DataFrame) -> go.Figure:
         x=monthly_totals['month'],
         y=-monthly_totals['expenses'], # Negate to show below x-axis
         marker_color=THEME_COLORS['expense'],
-        hovertemplate='<b>Uitgaven</b><br>€%{y:,.2f}<extra></extra>'
+        hovertemplate='<b>Uitgaven</b><br>%{y:,.2f}<extra></extra>'
     ))
     
     # Net line
@@ -101,14 +101,14 @@ def create_income_expense_chart(monthly_totals: pd.DataFrame) -> go.Figure:
         mode='lines+markers',
         marker=dict(size=8, color=THEME_COLORS['success']),
         line=dict(width=3, color=THEME_COLORS['success']),
-        hovertemplate='<b>Netto</b><br>€%{y:,.2f}<extra></extra>'
+        hovertemplate='<b>Netto</b><br>%{y:,.2f}<extra></extra>'
     ))
     
     fig.update_layout(
         title="Inkomsten vs. Uitgaven",
         barmode='group',
         xaxis_title="Maand",
-        yaxis_title="Bedrag (€)",
+        yaxis_title="Bedrag ()",
         hovermode='x unified',
         height=CHART_CONFIG['height'],
         font=dict(family=CHART_CONFIG['font_family']),
@@ -149,7 +149,7 @@ def create_category_breakdown(category_totals: Dict[str, float], category_colors
         hole=0.4,
         marker=dict(colors=colors),
         textinfo='label+percent',
-        hovertemplate='<b>%{label}</b><br>€%{value:,.2f}<br>%{percent}<extra></extra>'
+        hovertemplate='<b>%{label}</b><br>%{value:,.2f}<br>%{percent}<extra></extra>'
     )])
     
     fig.update_layout(
@@ -242,7 +242,7 @@ def create_year_comparison(yearly_data: Dict[int, Dict[str, float]]) -> go.Figur
         x=years,
         y=income_values,
         marker_color=THEME_COLORS['income'],
-        hovertemplate='<b>Inkomsten</b><br>€%{y:,.2f}<extra></extra>'
+        hovertemplate='<b>Inkomsten</b><br>%{y:,.2f}<extra></extra>'
     ))
     
     fig.add_trace(go.Bar(
@@ -250,7 +250,7 @@ def create_year_comparison(yearly_data: Dict[int, Dict[str, float]]) -> go.Figur
         x=years,
         y=[-x for x in expense_values], # Negate to show below x-axis
         marker_color=THEME_COLORS['expense'],
-        hovertemplate='<b>Uitgaven</b><br>€%{y:,.2f}<extra></extra>'
+        hovertemplate='<b>Uitgaven</b><br>%{y:,.2f}<extra></extra>'
     ))
     
     fig.add_trace(go.Scatter(
@@ -261,16 +261,16 @@ def create_year_comparison(yearly_data: Dict[int, Dict[str, float]]) -> go.Figur
         marker=dict(size=10, color=THEME_COLORS['success']),
         line=dict(width=3, color=THEME_COLORS['success']),
         yaxis='y2',
-        hovertemplate='<b>Netto</b><br>€%{y:,.2f}<extra></extra>'
+        hovertemplate='<b>Netto</b><br>%{y:,.2f}<extra></extra>'
     ))
     
     fig.update_layout(
         title="Jaarlijkse Vergelijking",
         barmode='group',
         xaxis_title="Jaar",
-        yaxis_title="Bedrag (€)",
+        yaxis_title="Bedrag ()",
         yaxis2=dict(
-            title="Netto (€)",
+            title="Netto ()",
             overlaying='y',
             side='right'
         ),

@@ -35,7 +35,7 @@ def show_dashboard():
         st.error("Je moet ingelogd zijn om het dashboard te bekijken")
         return
 
-    st.title("📊 Financieel Dashboard")
+    st.title("Financieel Dashboard")
     
     # Initialize database operations
     db_ops = DatabaseOperations()
@@ -125,7 +125,7 @@ def show_dashboard():
 
     # Sidebar filters
     with st.sidebar:
-        st.header("🔍 Filters")
+        st.header(" Filters")
         
         # Date range removed from here
         
@@ -162,12 +162,12 @@ def show_dashboard():
                 selected_categories.append(cat)
                 
         # Apply filters button
-        if st.button("🔄 Filters Toepassen", use_container_width=True):
+        if st.button("Filters Toepassen", use_container_width=True):
             st.rerun()
 
         st.divider()
-        st.subheader("🛠️ Systeem")
-        if st.button("🧼 Duplicaten Opschonen", help="Vernieuwt de unieke codes van alle transacties en verwijdert duplicaten."):
+        st.subheader("Systeem")
+        if st.button("Duplicaten Opschonen", help="Vernieuwt de unieke codes van alle transacties en verwijdert duplicaten."):
             with st.spinner("Database wordt bijgewerkt..."):
                 results = db_ops.migrate_transaction_hashes(user.id)
                 if results['success'] > 0 or results['duplicates_removed'] > 0:
@@ -223,11 +223,11 @@ def show_dashboard():
     
     # Main Tabs
     tab1, tab2, tab3, tab4, tab5 = st.tabs([
-        "📊 Overzicht", 
-        "📈 Trends", 
-        "🎯 Investeringen",
-        "📅 Jaarlijks",
-        "⏳ Lopende"
+        " Overzicht", 
+        " Trends", 
+        " Investeringen",
+        " Jaarlijks",
+        " Lopende"
     ])
     
     with tab1:
@@ -309,7 +309,7 @@ def show_trends_tab(analytics: Analytics, cat_engine: CategorizationEngine):
         df = pd.DataFrame([
             {
                 'Categorie': cat,
-                'Bedrag': f"€{abs(amount):,.2f}",
+                'Bedrag': f"{abs(amount):,.2f}",
                 'Type': 'Inkomst' if amount > 0 else 'Uitgave'
             }
             for cat, amount in sorted(category_totals.items(), key=lambda x: abs(x[1]), reverse=True)
@@ -320,13 +320,13 @@ def show_trends_tab(analytics: Analytics, cat_engine: CategorizationEngine):
 
 def show_budget_comparison(analytics: Analytics, categories: list[dict], user_id: str, db_ops: DatabaseOperations, investment_goal: float, period_label: str = ""):
     """Render the budget vs actual table."""
-    st.subheader("🗓️ Budget Planning & Realisatie")
+    st.subheader("Budget Planning & Realisatie")
     
     total_income = analytics.get_total_income()
     
     st.markdown(dedent(f"""
         <div style="background-color: #f8fafc; padding: 15px; border-radius: 10px; border-left: 5px solid #3b82f6; margin-bottom: 20px;">
-            <h4 style="margin:0; color: #64748b;">Totaal Inkomen ({period_label}): <span style="color: #0f172a;">€{total_income:,.2f}</span></h4>
+            <h4 style="margin:0; color: #64748b;">Totaal Inkomen ({period_label}): <span style="color: #0f172a;">{total_income:,.2f}</span></h4>
         </div>
     """), unsafe_allow_html=True)
 
@@ -373,7 +373,7 @@ def show_budget_comparison(analytics: Analytics, categories: list[dict], user_id
         display_df = df_budget.copy()
         
         for col in ["Budget", "Uitgegeven", "Overschot"]:
-            display_df[col] = display_df[col].apply(lambda x: f"€{x:,.2f}")
+            display_df[col] = display_df[col].apply(lambda x: f"{x:,.2f}")
             
         st.table(display_df[["Categorie", "Verdeling", "Budget", "Uitgegeven", "Overschot"]].style.apply(_style_budget_surplus, axis=1))
 
@@ -385,18 +385,18 @@ def show_budget_comparison(analytics: Analytics, categories: list[dict], user_id
         st.markdown(dedent(f"""
             <div style="display: flex; justify-content: space-between; padding: 10px; background-color: var(--color-surface); border-radius: 5px; font-weight: bold; margin-top: -15px; border: 1px solid var(--color-border);">
                 <span>TOTAAL</span>
-                <span style="color: {t_color};">Overschot: €{total_surplus:,.2f}</span>
+                <span style="color: {t_color};">Overschot: {total_surplus:,.2f}</span>
             </div>
         """), unsafe_allow_html=True)
         
     # Budget Editor
-    with st.expander("⚙️ Budget Verdeling Aanpassen"):
+    with st.expander(" Budget Verdeling Aanpassen"):
         budgetable_cats = [c for c in categories if c['name'] != "Inkomen"]
         current_total = sum(int(c.get('percentage', 0) or 0) for c in budgetable_cats)
         
         st.write(f"**Totaal Gebudgetteerd:** {current_total}%")
         if current_total > 100:
-            st.warning("⚠️ Meer dan 100%!")
+            st.warning(" Meer dan 100%!")
             st.progress(1.0)
         else:
             st.progress(current_total / 100)
@@ -411,7 +411,7 @@ def show_budget_comparison(analytics: Analytics, categories: list[dict], user_id
                     new_val = st.number_input(f"{cat['name']} (%)", min_value=0, max_value=100, value=current_pct, key=f"inp_{cat['id']}")
                     new_percentages[cat['id']] = (new_val, cat['name'])
                     
-            if st.form_submit_button("✅ Verdeling Opslaan"):
+            if st.form_submit_button(" Verdeling Opslaan"):
                 all_success = True
                 inv_pct = None
                 
@@ -435,7 +435,7 @@ def _style_budget_surplus(row):
     border_style = 'border-top: 2px solid #cbd5e1;' if category == "Investeren" else ''
     
     try:
-        val = float(val_str.replace('€', '').replace(',', ''))
+        val = float(val_str.replace('', '').replace(',', ''))
         
         style = ''
         target_col_idx = 4 # Overschot is the 5th column
@@ -468,21 +468,21 @@ def show_investments_tab(analytics: Analytics, investment_goal: float):
         fig = create_investment_progress(current_pct, investment_goal)
         st.plotly_chart(fig, use_container_width=True)
     with col2:
-        st.markdown("### 📊 Analyse")
+        st.markdown("### Analyse")
         total_income = analytics.get_total_income()
         cat_totals = analytics.get_category_totals()
         investments = abs(cat_totals.get('Investeren', 0))
         
-        st.metric("Totaal Inkomen", f"€{total_income:,.2f}")
-        st.metric("Totaal Geïnvesteerd", f"€{investments:,.2f}")
+        st.metric("Totaal Inkomen", f"{total_income:,.2f}")
+        st.metric("Totaal Geïnvesteerd", f"{investments:,.2f}")
         st.metric("Percentage", f"{current_pct:.1f}%")
         st.divider()
         
         if current_pct >= investment_goal:
-            st.success(f"✅ Je hebt je doel van {investment_goal}% bereikt!")
+            st.success(f" Je hebt je doel van {investment_goal}% bereikt!")
         else:
             remaining = (investment_goal / 100 * total_income) - investments
-            st.warning(f"⚠️ Nog €{remaining:,.2f} nodig om je doel te bereiken")
+            st.warning(f" Nog {remaining:,.2f} nodig om je doel te bereiken")
 
 def show_yearly_tab(analytics: Analytics):
     """Show yearly comparison tab."""
@@ -498,9 +498,9 @@ def show_yearly_tab(analytics: Analytics):
         df = pd.DataFrame([
             {
                 'Jaar': year,
-                'Inkomsten': f"€{data['income']:,.2f}",
-                'Uitgaven': f"€{data['expenses']:,.2f}",
-                'Netto': f"€{data['net']:,.2f}",
+                'Inkomsten': f"{data['income']:,.2f}",
+                'Uitgaven': f"{data['expenses']:,.2f}",
+                'Netto': f"{data['net']:,.2f}",
                 'Investeringen %': f"{data['investment_pct']:.1f}%"
             }
             for year, data in sorted(yearly_data.items(), reverse=True)
@@ -511,7 +511,7 @@ def show_yearly_tab(analytics: Analytics):
 
 def show_lopende_rekening_tab(all_transactions: list, db_ops: DatabaseOperations, user_id: str, categories: list):
     """Show transactions marked as Lopende Rekening."""
-    st.subheader("⏳ Lopende Rekening")
+    st.subheader("Lopende Rekening")
     st.caption("Transacties die zijn gemarkeerd om terugbetaald te worden.")
     
     lopende_trans = [t for t in all_transactions if t.get('is_lopende_rekening', False)]
@@ -523,7 +523,7 @@ def show_lopende_rekening_tab(all_transactions: list, db_ops: DatabaseOperations
 
     # Summary metric
     total_open = sum(float(t['bedrag']) for t in lopende_trans)
-    st.metric("Totaal openstaand", f"€{total_open:,.2f}")
+    st.metric("Totaal openstaand", f"{total_open:,.2f}")
     st.divider()
     
     cat_engine = CategorizationEngine(categories)
@@ -575,10 +575,10 @@ def show_lopende_rekening_tab(all_transactions: list, db_ops: DatabaseOperations
             if 'editor_lopende' in st.session_state:
                  del st.session_state.editor_lopende
 
-    # 🔍 Search and Filter UI for Lopende
+    #  Search and Filter UI for Lopende
     col_search_l, col_cat_l = st.columns([3, 1.5])
     with col_search_l:
-        search_l = st.text_input("🔍 Broad Search", placeholder="Zoek op naam, omschrijving...", key="lop_search", label_visibility="collapsed")
+        search_l = st.text_input(" Broad Search", placeholder="Zoek op naam, omschrijving...", key="lop_search", label_visibility="collapsed")
     with col_cat_l:
         cat_options_l = ["Alle Categorieën"] + db_category_names
         cat_filter_l = st.selectbox("Category Filter", options=cat_options_l, key="lop_cat_filter", label_visibility="collapsed")
@@ -646,17 +646,17 @@ def show_lopende_rekening_tab(all_transactions: list, db_ops: DatabaseOperations
     
     col_sel_l, col_desel_l, col_del_l, col_ai_l = st.columns([1.5, 1.5, 2, 2])
     with col_sel_l:
-        if st.button("✅ Alles", key="btn_sel_lop_all", use_container_width=True):
+        if st.button("Alles", key="btn_sel_lop_all", use_container_width=True):
             st.session_state.lopende_df_state.loc[filtered_lop.index, 'Select'] = True
             st.rerun()
     with col_desel_l:
-        if st.button("❌ Niets", key="btn_desel_lop_all", use_container_width=True):
+        if st.button("Niets", key="btn_desel_lop_all", use_container_width=True):
             st.session_state.lopende_df_state.loc[filtered_lop.index, 'Select'] = False
             st.rerun()
 
     with col_del_l:
         if not selected_rows.empty:
-            if st.button(f"🗑️ Verwijder ({len(selected_rows)})", type="primary", use_container_width=True, key="btn_del_lop_top"):
+            if st.button(f" Verwijder ({len(selected_rows)})", type="primary", use_container_width=True, key="btn_del_lop_top"):
                 count = 0
                 for tid in selected_rows['id']:
                      if db_ops.update_transaction(tid, {"is_lopende_rekening": False}, user_id):
@@ -666,11 +666,11 @@ def show_lopende_rekening_tab(all_transactions: list, db_ops: DatabaseOperations
                     get_cached_transactions.clear()
                     st.rerun()
         else:
-            st.button(f"🗑️ Verwijder", type="primary", use_container_width=True, disabled=True, key="btn_del_lop_dis")
+            st.button(f" Verwijder", type="primary", use_container_width=True, disabled=True, key="btn_del_lop_dis")
     
     with col_ai_l:
         if not selected_rows.empty:
-            if st.button("🤖 AI Optimaliseer", use_container_width=True, key="btn_ai_lop_top"):
+            if st.button("AI Optimaliseer", use_container_width=True, key="btn_ai_lop_top"):
                 from services.ai_categorizer import AiCategorizer
                 from models.transaction import Transaction
                 ai_categorizer = AiCategorizer()
@@ -696,27 +696,27 @@ def show_lopende_rekening_tab(all_transactions: list, db_ops: DatabaseOperations
                                       "ai_name": tx.ai_name, "ai_reasoning": tx.ai_reasoning, "ai_confidence": tx.ai_confidence}
                             db_ops.update_transaction(tx.id, updates, user_id)
                         
-                        st.success(f"✅ {len(optimized_txs)} geoptimaliseerd!")
+                        st.success(f" {len(optimized_txs)} geoptimaliseerd!")
                         get_cached_transactions.clear()
                         st.rerun()
         else:
-             st.button("🤖 AI Optimaliseer", use_container_width=True, disabled=True, key="btn_ai_lop_dis")
+             st.button("AI Optimaliseer", use_container_width=True, disabled=True, key="btn_ai_lop_dis")
 
     # Display Editor
     edited_df = st.data_editor(
         filtered_lop,
         column_config={
-            "Select": st.column_config.CheckboxColumn("✅", width="small", default=False),
+            "Select": st.column_config.CheckboxColumn("", width="small", default=False),
             "Datum": st.column_config.DateColumn("Datum", format="DD-MM-YYYY"),
             "Tegenpartij": st.column_config.TextColumn("Tegenpartij"),
-            "Bedrag": st.column_config.NumberColumn("Bedrag", format="€ %.2f"),
+            "Bedrag": st.column_config.NumberColumn("Bedrag", format=" %.2f"),
             "Categorie": st.column_config.SelectboxColumn("Categorie", options=db_category_names, required=True),
-            "Lopende": st.column_config.CheckboxColumn("⏳", default=True),
+            "Lopende": st.column_config.CheckboxColumn("", default=True),
             "Omschrijving": None, # Hide description
-            "AI Naam": st.column_config.TextColumn("🤖 AI Naam", disabled=True),
+            "AI Naam": st.column_config.TextColumn(" AI Naam", disabled=True),
 
-            "AI Motivatie": st.column_config.TextColumn("🤖 Motivatie", disabled=True),
-            "Vertrouwen": st.column_config.ProgressColumn("🤖 Vertrouwen", format="%.0f%%", min_value=0, max_value=1),
+            "AI Motivatie": st.column_config.TextColumn(" Motivatie", disabled=True),
+            "Vertrouwen": st.column_config.ProgressColumn(" Vertrouwen", format="%.0f%%", min_value=0, max_value=1),
             "id": None
         },
 
@@ -730,7 +730,7 @@ def show_lopende_rekening_tab(all_transactions: list, db_ops: DatabaseOperations
 
 def show_empty_state():
     """Show empty state when no transactions exist."""
-    st.info("📭 Je hebt nog geen transacties geïmporteerd")
+    st.info(" Je hebt nog geen transacties geïmporteerd")
     st.markdown("""
     ### Aan de slag
     1. **Upload je CSV**: Ga naar de 'CSV Importeren' pagina
@@ -738,6 +738,6 @@ def show_empty_state():
     3. **Controleer en importeer**: De transacties worden automatisch gecategoriseerd
     4. **Bekijk je dashboard**: Kom terug hier om je financiële overzicht te zien
     """)
-    if st.button("📤 Ga naar CSV Importeren", type="primary"):
+    if st.button("Ga naar CSV Importeren", type="primary"):
         st.session_state['page'] = 'upload'
         st.rerun()

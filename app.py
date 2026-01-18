@@ -15,7 +15,7 @@ from utils.ui.template_loader import load_template
 # Page configuration
 st.set_page_config(
     page_title="FinTrackable",
-    page_icon="🏦",
+    page_icon="",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -38,7 +38,7 @@ def main():
     # Check if Supabase is configured
     client = get_supabase_client()
     if not client:
-        st.error("⚠️ Supabase is niet geconfigureerd. Controleer je .env bestand.")
+        st.error(" Supabase is niet geconfigureerd. Controleer je .env bestand.")
         st.info("""
         **Setup instructies:**
         
@@ -90,13 +90,13 @@ def show_main_app():
     
     # Sidebar navigation
     with st.sidebar:
-        st.title("🏦 FinTrackable")
+        st.title("FinTrackable")
         st.markdown("---")
         
         # Navigation menu
         page = st.radio(
             "Navigatie",
-            ["📊 Dashboard", "📤 CSV Importeren", "🏷️ Categorieën", "⚙️ Instellingen"],
+            [" Dashboard", " CSV Importeren", " Categorieën", " Instellingen"],
             key="navigation"
         )
         
@@ -105,7 +105,7 @@ def show_main_app():
             st.session_state.last_page = page
             
         if st.session_state.last_page != page:
-            if page == "🏷️ Categorieën":
+            if page == " Categorieën":
                 st.session_state.hist_reload_needed = True
                 st.session_state.pending_trans_reload = True
             st.session_state.last_page = page
@@ -113,23 +113,23 @@ def show_main_app():
         st.markdown("---")
         
         # Logout button
-        if st.button("🚪 Uitloggen", use_container_width=True):
+        if st.button("Uitloggen", use_container_width=True):
             logout()
     
     # Page routing
-    if page == "📊 Dashboard":
+    if page == " Dashboard":
         show_dashboard()
-    elif page == "📤 CSV Importeren":
+    elif page == " CSV Importeren":
         show_upload_page()
-    elif page == "🏷️ Categorieën":
+    elif page == " Categorieën":
         show_categorization_review()
-    elif page == "⚙️ Instellingen":
+    elif page == " Instellingen":
         show_settings_page()
 
 def show_settings_page():
     """Show settings and preferences page."""
     
-    st.title("⚙️ Instellingen")
+    st.title("Instellingen")
     
     from views.auth import get_current_user
     from database.operations import DatabaseOperations
@@ -156,7 +156,7 @@ def show_settings_page():
             help="Het percentage van je inkomen dat je wilt investeren"
         )
         
-        submit = st.form_submit_button("💾 Opslaan")
+        submit = st.form_submit_button(" Opslaan")
         
         if submit:
             success = db_ops.create_or_update_preferences(
@@ -172,10 +172,10 @@ def show_settings_page():
                     db_ops.update_category_percentage(investeren_cat['id'], int(investment_goal), user.id)
             
             if success:
-                st.success("✅ Voorkeuren opgeslagen!")
+                st.success(" Voorkeuren opgeslagen!")
                 st.rerun()
             else:
-                st.error("❌ Fout bij opslaan van voorkeuren")
+                st.error(" Fout bij opslaan van voorkeuren")
     
     st.divider()
     
@@ -187,12 +187,12 @@ def show_settings_page():
     st.divider()
     
     # Danger zone
-    st.subheader("⚠️ Gevaarlijke Acties")
+    st.subheader("Gevaarlijke Acties")
     
     with st.expander("Alle transacties verwijderen", expanded=False):
-        st.warning("⚠️ Deze actie kan niet ongedaan worden gemaakt!")
+        st.warning(" Deze actie kan niet ongedaan worden gemaakt!")
         
-        if st.button("🗑️ Verwijder alle transacties", type="secondary"):
+        if st.button("Verwijder alle transacties", type="secondary"):
             # Confirmation
             st.session_state['confirm_delete'] = True
         
@@ -201,17 +201,17 @@ def show_settings_page():
             col1, col2 = st.columns(2)
             
             with col1:
-                if st.button("✅ Ja, verwijder alles", type="primary"):
+                if st.button("Ja, verwijder alles", type="primary"):
                     success = db_ops.delete_all_transactions(user.id)
                     if success:
-                        st.success("✅ Alle transacties verwijderd")
+                        st.success(" Alle transacties verwijderd")
                         st.session_state['confirm_delete'] = False
                         st.rerun()
                     else:
-                        st.error("❌ Fout bij verwijderen")
+                        st.error(" Fout bij verwijderen")
             
             with col2:
-                if st.button("❌ Annuleren"):
+                if st.button("Annuleren"):
                     st.session_state['confirm_delete'] = False
                     st.rerun()
 

@@ -144,54 +144,109 @@ body,
     color: white !important;
 }
 
-/* === BUTTONS === */
-.stButton>button {
-    border-radius: 0.75rem !important;
-    font-weight: 700 !important;
-    font-size: 0.8rem !important;
+/* === BUTTONS (DRY Framework) === */
+button,
+.btn-pill,
+.stButton>button,
+.stFormSubmitButton>button,
+[data-testid="stBaseButton-secondary"],
+[data-testid="stBaseButton-primary"] {
+    padding: 17px 40px !important;
+    border-radius: 50px !important;
+    cursor: pointer !important;
+    border: 0 !important;
+    background-color: var(--color-surface) !important;
+    box-shadow: rgba(0, 0, 0, 0.05) 0 0 8px !important;
+    letter-spacing: 1.5px !important;
     text-transform: uppercase !important;
-    letter-spacing: 0.05em !important;
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    padding: 0.625rem 2rem !important;
-    border: 1px solid var(--color-border) !important;
-    width: auto;
-    min-width: 140px;
+    font-size: 15px !important;
+    font-weight: 700 !important;
+    font-family: 'Manrope', sans-serif !important;
     color: var(--color-text) !important;
+    transition: all 0.5s ease !important;
+    height: auto !important;
+    min-height: 54px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: auto !important;
+    text-decoration: none !important;
+    box-sizing: border-box !important;
 }
 
-.stButton>button:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
-    border-color: var(--color-primary) !important;
+button p,
+.stButton>button p,
+[data-testid="stBaseButton-secondary"] p {
+    margin: 0 !important;
+    font-weight: 700 !important;
 }
 
-/* Primary Button (Main Actions) */
-.stButton>button[kind="primary"] {
+button:hover,
+.btn-pill:hover,
+.stButton>button:hover,
+.stFormSubmitButton>button:hover,
+[data-testid="stBaseButton-secondary"]:hover,
+[data-testid="stBaseButton-primary"]:hover {
+    letter-spacing: 3px !important;
+    background-color: var(--color-primary) !important;
+    color: #ffffff !important;
+    box-shadow: rgba(99, 102, 241, 0.4) 0px 7px 29px 0px !important;
+}
+
+button:active,
+.btn-pill:active,
+.stButton>button:active,
+.stFormSubmitButton>button:active,
+[data-testid="stBaseButton-secondary"]:active,
+[data-testid="stBaseButton-primary"]:active {
+    letter-spacing: 3px !important;
+    background-color: var(--color-primary) !important;
+    color: #ffffff !important;
+    box-shadow: none !important;
+    transform: translateY(10px) !important;
+    transition: 100ms !important;
+}
+
+.btn-pill-primary {
     background-color: var(--color-primary) !important;
     color: white !important;
-    border: none !important;
 }
 
-.stButton>button[kind="primary"]:hover {
-    background-color: #4f46e5 !important;
-    box-shadow: 0 8px 20px rgba(99, 102, 241, 0.3) !important;
+/* Specific cleanup for button text alignment in Streamlit */
+[data-testid="stBaseButton-secondary"] div,
+[data-testid="stBaseButton-primary"] div {
+    display: flex !important;
+    align-items: center !important;
 }
 
-/* Secondary Button (Default) */
-.stButton>button[kind="secondary"] {
-    background-color: var(--color-surface) !important;
-    color: var(--color-text) !important;
+/* === HEADER CLEANUP === */
+/* Ensure the header is visible but transparent */
+[data-testid="stHeader"] {
+    background-color: transparent !important;
+    display: block !important;
+    z-index: 100 !important;
 }
 
-.stButton>button[kind="secondary"]:hover {
-    background-color: var(--color-empty-bar) !important;
+/* Hide the default Streamlit toolbar menu (three dots, deploy) */
+[data-testid="stToolbar"] {
+    display: none !important;
+}
+
+/* Explicitly ensure the sidebar toggle button is visible */
+[data-testid="stSidebarCollapseButton"],
+[data-testid="stSidebar"] button,
+button[kind="header"] {
+    display: flex !important;
+    visibility: visible !important;
+    color: var(--color-primary) !important;
 }
 
 /* === FORMS & INPUTS === */
 .stTextInput input,
 .stSelectbox [data-baseweb="select"],
 .stNumberInput input {
-    border-radius: 0.75rem !important;
+    border-radius: 50px !important;
+    /* Pill style for consistency */
     border: 1px solid var(--color-border) !important;
     background-color: var(--color-surface) !important;
     color: var(--color-text) !important;

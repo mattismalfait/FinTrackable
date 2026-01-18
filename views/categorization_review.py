@@ -13,7 +13,7 @@ from decimal import Decimal
 def show_categorization_review():
     """Display categorization review interface."""
     
-    st.title("🏷️ Categorisatie Beheren")
+    st.title("Categorisatie Beheren")
     
     user = get_current_user()
     if not user:
@@ -23,7 +23,7 @@ def show_categorization_review():
     db_ops = DatabaseOperations()
     
     # Tabs for different views
-    tab1, tab2, tab3 = st.tabs(["📬 Te Bevestigen", "📜 Historiek", "⚙️ Regels Beheren"])
+    tab1, tab2, tab3 = st.tabs([" Te Bevestigen", " Historiek", " Regels Beheren"])
     
     with tab1:
         show_pending_review(user.id, db_ops)
@@ -146,7 +146,7 @@ def show_pending_review(user_id: str, db_ops: DatabaseOperations):
     
     # Check for suggested categories
     if 'new_ai_cats' in st.session_state and st.session_state['new_ai_cats']:
-        with st.expander("💡 AI Suggereert Nieuwe Categorieën", expanded=True):
+        with st.expander(" AI Suggereert Nieuwe Categorieën", expanded=True):
             st.write("De AI heeft transacties gevonden die niet passen in je huidige categorieën.")
             
             cats_to_remove = []
@@ -261,12 +261,12 @@ def show_pending_review(user_id: str, db_ops: DatabaseOperations):
     if "Overig" not in db_category_names:
         db_category_names.append("Overig")
         
-    # 🔍 Search and Filter UI
+    #  Search and Filter UI
     st.write(f"**{len(st.session_state.pending_trans_df)}** transacties wachten op bevestiging")
     
     col_search, col_cat_filter = st.columns([3, 1.5])
     with col_search:
-        search_query = st.text_input("🔍 Broad Search", placeholder="Zoek op naam, omschrijving, AI details...", key="pending_search", label_visibility="collapsed")
+        search_query = st.text_input(" Broad Search", placeholder="Zoek op naam, omschrijving, AI details...", key="pending_search", label_visibility="collapsed")
     with col_cat_filter:
         cat_options = ["Alle Categorieën"] + db_category_names
         pending_cat_filter = st.selectbox("Categoriefilter", options=cat_options, key="pending_cat_opt", label_visibility="collapsed")
@@ -291,7 +291,7 @@ def show_pending_review(user_id: str, db_ops: DatabaseOperations):
         st.info("Geen transacties gevonden voor deze filters.")
     
     # Quick Add Category 
-    with st.expander("➕ Nieuwe Categorie Aanmaken", expanded=False):
+    with st.expander(" Nieuwe Categorie Aanmaken", expanded=False):
         c1, c2, c3 = st.columns([3, 1, 1])
         with c1:
             new_cat_quick = st.text_input("Naam nieuwe categorie", key="quick_cat_name", placeholder="Bijv. Hobby's")
@@ -319,7 +319,7 @@ def show_pending_review(user_id: str, db_ops: DatabaseOperations):
     col_confirm, col_delete, col_ai, col_sel_all, col_desel_all = st.columns([1.5, 1.5, 2, 1.5, 1.5])
     
     with col_confirm:
-        if st.button("✅ Bevestig", type="primary", use_container_width=True, help="Bevestig de geselecteerde transacties", key="btn_confirm_top"):
+        if st.button("Bevestig", type="primary", use_container_width=True, help="Bevestig de geselecteerde transacties", key="btn_confirm_top"):
             # Use current state of editor if available
             success_count = 0
             # Since the button is above the editor, we rely on the editor key 'editor_pending'
@@ -341,7 +341,7 @@ def show_pending_review(user_id: str, db_ops: DatabaseOperations):
                 st.rerun()
 
     with col_delete:
-        if st.button("🗑️ Verwijder", type="secondary", use_container_width=True, help="Verwijder geselecteerde transacties", key="btn_delete_top"):
+        if st.button("Verwijder", type="secondary", use_container_width=True, help="Verwijder geselecteerde transacties", key="btn_delete_top"):
             df_to_proc = st.session_state.pending_trans_df
             selected_rows = df_to_proc[df_to_proc["Select"] == True]
             if not selected_rows.empty:
@@ -355,7 +355,7 @@ def show_pending_review(user_id: str, db_ops: DatabaseOperations):
                     st.rerun()
 
     with col_ai:
-        if st.button("🤖 AI Optimaliseer", help="Laat de AI agent betere namen en categorieën voorstellen", use_container_width=True, key="btn_ai_top"):
+        if st.button("AI Optimaliseer", help="Laat de AI agent betere namen en categorieën voorstellen", use_container_width=True, key="btn_ai_top"):
             df_to_proc = st.session_state.pending_trans_df
             selected_rows = df_to_proc[df_to_proc["Select"] == True]
             if selected_rows.empty:
@@ -387,7 +387,7 @@ def show_pending_review(user_id: str, db_ops: DatabaseOperations):
                         optimized_txs = ai_categorizer.analyze_batch(tx_objs)
                         
                         if not any(t.ai_category for t in optimized_txs):
-                            st.warning("⚠️ Geen AI details gevonden.")
+                            st.warning(" Geen AI details gevonden.")
                             return
 
                         # Update DB
@@ -425,20 +425,20 @@ def show_pending_review(user_id: str, db_ops: DatabaseOperations):
                         if new_cats_found:
                             st.session_state['new_ai_cats'] = list(new_cats_found)
                         
-                        st.success(f"✅ {len(optimized_txs)} geoptimaliseerd!")
+                        st.success(f" {len(optimized_txs)} geoptimaliseerd!")
                         if new_cats_found:
-                             st.info(f"💡 AI suggereert nieuwe categorieën: {', '.join(new_cats_found)}")
+                             st.info(f" AI suggereert nieuwe categorieën: {', '.join(new_cats_found)}")
                         
                         st.session_state.pending_trans_reload = True
                         st.rerun()
 
     with col_sel_all:
-        if st.button("✅ Alles", key="btn_sel_all_top", use_container_width=True, help="Selecteer alle getoonde transacties"):
+        if st.button("Alles", key="btn_sel_all_top", use_container_width=True, help="Selecteer alle getoonde transacties"):
             st.session_state.pending_trans_df.loc[filtered_df.index, 'Select'] = True
             st.rerun()
 
     with col_desel_all:
-        if st.button("❌ Niets", key="btn_desel_all_top", use_container_width=True, help="Deselecteer alle getoonde transacties"):
+        if st.button("Niets", key="btn_desel_all_top", use_container_width=True, help="Deselecteer alle getoonde transacties"):
             st.session_state.pending_trans_df.loc[filtered_df.index, 'Select'] = False
             st.rerun()
 
@@ -454,17 +454,17 @@ def show_pending_review(user_id: str, db_ops: DatabaseOperations):
     edited_df = st.data_editor(
         filtered_df,
         column_config={
-            "Select": st.column_config.CheckboxColumn("✅", width="small", default=False),
+            "Select": st.column_config.CheckboxColumn("", width="small", default=False),
             "Datum": st.column_config.DateColumn("Datum", format="DD/MM/YYYY", step=1),
             "Tegenpartij": st.column_config.TextColumn("Tegenpartij", required=True),
-            "Bedrag": st.column_config.NumberColumn("Bedrag", format="€ %.2f"),
+            "Bedrag": st.column_config.NumberColumn("Bedrag", format=" %.2f"),
             "Categorie": st.column_config.SelectboxColumn("Categorie", options=db_category_names, required=True),
-            "Lopende": st.column_config.CheckboxColumn("⏳", help="Lopende rekening", default=False, width="small"),
+            "Lopende": st.column_config.CheckboxColumn("", help="Lopende rekening", default=False, width="small"),
             "Omschrijving": None, # Hide description
-            "AI Naam": st.column_config.TextColumn("🤖 AI Naam", disabled=True),
+            "AI Naam": st.column_config.TextColumn(" AI Naam", disabled=True),
 
-            "AI Motivatie": st.column_config.TextColumn("🤖 Motivatie", disabled=True),
-            "Vertrouwen": st.column_config.ProgressColumn("🤖 Vertrouwen", format="%.0f%%", min_value=0, max_value=1),
+            "AI Motivatie": st.column_config.TextColumn(" Motivatie", disabled=True),
+            "Vertrouwen": st.column_config.ProgressColumn(" Vertrouwen", format="%.0f%%", min_value=0, max_value=1),
             "id": None # Hide ID column
         },
 
@@ -651,9 +651,9 @@ def show_confirmed_history(user_id: str, db_ops: DatabaseOperations):
     db_category_names = sorted([c['name'] for c in user_categories])
     if "Overig" not in db_category_names: db_category_names.append("Overig")
 
-    # 🔍 Broad Search for History
+    #  Broad Search for History
     st.write(f"**{len(df)}** bevestigde transacties")
-    search_hist = st.text_input("🔍 Broad Search", placeholder="Zoek op naam, omschrijving, AI details...", key="history_search", label_visibility="collapsed")
+    search_hist = st.text_input(" Broad Search", placeholder="Zoek op naam, omschrijving, AI details...", key="history_search", label_visibility="collapsed")
     
     # Apply text filter to history DF
     filtered_hist = df.copy()
@@ -672,7 +672,7 @@ def show_confirmed_history(user_id: str, db_ops: DatabaseOperations):
     col_unconfirm, col_delete, col_ai, col_sel_all, col_desel_all = st.columns([1.5, 1.5, 2, 1.5, 1.5])
     
     with col_unconfirm:
-        if st.button("♻️ Onbevestigd", key="btn_unconfirm_hist_top", use_container_width=True, help="Markeer geselecteerde transacties als onbevestigd"):
+        if st.button("Onbevestigd", key="btn_unconfirm_hist_top", use_container_width=True, help="Markeer geselecteerde transacties als onbevestigd"):
             selected_ids = filtered_hist[filtered_hist['Select']]['id'].tolist()
             if selected_ids:
                 for tid in selected_ids: db_ops.update_transaction(tid, {"is_confirmed": False}, user_id)
@@ -682,7 +682,7 @@ def show_confirmed_history(user_id: str, db_ops: DatabaseOperations):
                 st.rerun()
 
     with col_delete:
-        if st.button("🗑️ Verwijder", key="btn_delete_hist_top", use_container_width=True, help="Verwijder geselecteerde transacties definitief"):
+        if st.button("Verwijder", key="btn_delete_hist_top", use_container_width=True, help="Verwijder geselecteerde transacties definitief"):
             selected_ids = filtered_hist[filtered_hist['Select']]['id'].tolist()
             if selected_ids:
                 for tid in selected_ids: db_ops.delete_transaction(tid, user_id)
@@ -691,7 +691,7 @@ def show_confirmed_history(user_id: str, db_ops: DatabaseOperations):
                 st.rerun()
 
     with col_ai:
-        if st.button("🤖 AI Her-cat", key="btn_ai_opt_hist_top", help="Laat de AI agent opnieuw kijken naar de geselecteerde transacties", use_container_width=True):
+        if st.button("AI Her-cat", key="btn_ai_opt_hist_top", help="Laat de AI agent opnieuw kijken naar de geselecteerde transacties", use_container_width=True):
             selected_rows = filtered_hist[filtered_hist["Select"] == True]
             if selected_rows.empty:
                 st.warning("Selecteer eerst transacties.")
@@ -713,7 +713,7 @@ def show_confirmed_history(user_id: str, db_ops: DatabaseOperations):
                     optimized_txs = ai_categorizer.analyze_batch(tx_objs)
 
                     if not any(t.ai_reasoning for t in optimized_txs):
-                        st.warning("⚠️ Geen AI details gevonden. Controleer of de API key correct is ingesteld in het .env bestand.")
+                        st.warning(" Geen AI details gevonden. Controleer of de API key correct is ingesteld in het .env bestand.")
                         return
                     
                     for tx in optimized_txs:
@@ -742,17 +742,17 @@ def show_confirmed_history(user_id: str, db_ops: DatabaseOperations):
                             
                         db_ops.update_transaction(tx.id, updates, user_id)
                     
-                    st.success("✅ Historiek geoptimaliseerd!")
+                    st.success(" Historiek geoptimaliseerd!")
                     st.session_state.hist_reload_needed = True
                     st.rerun()
 
     with col_sel_all:
-        if st.button("✅ Alles", key="btn_sel_all_hist_top", use_container_width=True):
+        if st.button("Alles", key="btn_sel_all_hist_top", use_container_width=True):
             st.session_state.history_df_state.loc[filtered_hist.index, 'Select'] = True
             st.rerun()
 
     with col_desel_all:
-        if st.button("❌ Niets", key="btn_desel_all_hist_top", use_container_width=True):
+        if st.button("Niets", key="btn_desel_all_hist_top", use_container_width=True):
             st.session_state.history_df_state.loc[filtered_hist.index, 'Select'] = False
             st.rerun()
 
@@ -764,17 +764,17 @@ def show_confirmed_history(user_id: str, db_ops: DatabaseOperations):
     edited_df = st.data_editor(
         filtered_hist,
         column_config={
-            "Select": st.column_config.CheckboxColumn("✅", width="small", default=False),
+            "Select": st.column_config.CheckboxColumn("", width="small", default=False),
             "Datum": st.column_config.DateColumn("Datum", format="DD/MM/YYYY"),
             "Tegenpartij": st.column_config.TextColumn("Tegenpartij"),
-            "Bedrag": st.column_config.NumberColumn("Bedrag", format="€ %.2f"),
+            "Bedrag": st.column_config.NumberColumn("Bedrag", format=" %.2f"),
             "Categorie": st.column_config.SelectboxColumn("Categorie", options=db_category_names, required=True),
-            "Lopende": st.column_config.CheckboxColumn("⏳", help="Lopende rekening", default=False, width="small"),
+            "Lopende": st.column_config.CheckboxColumn("", help="Lopende rekening", default=False, width="small"),
             "Omschrijving": None, # Hide description
-            "AI Naam": st.column_config.TextColumn("🤖 AI Naam", disabled=True),
+            "AI Naam": st.column_config.TextColumn(" AI Naam", disabled=True),
 
-            "AI Motivatie": st.column_config.TextColumn("🤖 Motivatie", disabled=True),
-            "Vertrouwen": st.column_config.ProgressColumn("🤖 Vertrouwen", format="%.0f%%", min_value=0, max_value=1),
+            "AI Motivatie": st.column_config.TextColumn(" Motivatie", disabled=True),
+            "Vertrouwen": st.column_config.ProgressColumn(" Vertrouwen", format="%.0f%%", min_value=0, max_value=1),
             "id": None
         },
 
@@ -804,7 +804,7 @@ def show_rules_management(user_id: str, db_ops: DatabaseOperations):
     
     # Display existing categories and rules
     for category in user_categories:
-        with st.expander(f"📁 {category['name']}", expanded=False):
+        with st.expander(f" {category['name']}", expanded=False):
             st.markdown(f"**Kleur:** {category.get('color', '#9ca3af')}")
             
             rules = category.get('rules', [])
@@ -837,7 +837,7 @@ def show_rules_management(user_id: str, db_ops: DatabaseOperations):
                 
                 col_save, col_del = st.columns([1, 5])
                 with col_save:
-                    if st.form_submit_button("💾 Opslaan"):
+                    if st.form_submit_button(" Opslaan"):
                         # Process new keywords
                         new_keywords = [k.strip() for k in keywords_str.split(',') if k.strip()]
                         
@@ -865,13 +865,13 @@ def show_rules_management(user_id: str, db_ops: DatabaseOperations):
                     pass # Spacer
             
             # Delete category button (outside form)
-            if st.button(f"🗑️ Verwijder Categorie", key=f"del_{category['id']}"):
+            if st.button(f" Verwijder Categorie", key=f"del_{category['id']}"):
                  st.warning("Verwijderen van categorieën is momenteel niet beschikbaar")
     
     st.divider()
     
     # Add new category
-    st.subheader("➕ Nieuwe Categorie Toevoegen")
+    st.subheader("Nieuwe Categorie Toevoegen")
     
     with st.form("new_category_form"):
         new_cat_name = st.text_input("Categorienaam")
@@ -888,9 +888,9 @@ def show_rules_management(user_id: str, db_ops: DatabaseOperations):
                 )
                 success = db_ops.create_category(new_category, user_id)
                 if success:
-                    st.success(f"✅ Categorie '{new_cat_name}' toegevoegd!")
+                    st.success(f" Categorie '{new_cat_name}' toegevoegd!")
                     st.rerun()
                 else:
-                    st.error("❌ Fout bij toevoegen van categorie")
+                    st.error(" Fout bij toevoegen van categorie")
             else:
                 st.error("Vul een categorienaam in")

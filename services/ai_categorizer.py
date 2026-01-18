@@ -194,9 +194,7 @@ Your goal is to extract standardized merchant names and high-quality categories.
 4. CONFIDENCE: Score from 0.0 to 1.0.
 
 # CRITICAL RULES:
-- **LANGUAGE INDEPENDENT**: Patterns like 'Huur', 'Rent', 'Loyer' all mean 'Wonen' if that's your category for housing.
-- **AVOID 'Overig'**: Only use if the transaction is completely unintelligible.
-- **NEW CATEGORIES**: If a transaction clearly belongs to a specific category NOT listed (e.g., "Subscription", "Crypto"), suggest it in Title Case.
+- **INVESTMENT VS SAVINGS**: Do NOT categorize transfers to a 'Spaarboek' or 'Sparen' (Savings account) as 'Investeren'. Only use 'Investeren' for stocks, bonds, crypto, or institutional investment platforms (like Saxo, Bolero).
 - **OVERWRITE**: If your confidence is > 50%, you MUST provide an assignment.
 
 # OUTPUT FORMAT:

@@ -85,16 +85,10 @@
             </div>
             <div class="flex items-center gap-4">
                 {% if is_authenticated %}
-                <a href="/"
-                    class="bg-primary text-white text-xs font-bold py-2.5 px-6 rounded-lg transition-all hover:bg-indigo-700">Go
-                    to Dashboard</a>
+                <a href="/" class="btn-pill btn-pill-primary">Go to Dashboard</a>
                 {% else %}
-                <a href="/?nav=login"
-                    class="text-xs font-bold uppercase tracking-widest text-gray-900 px-4 py-2 hover:bg-gray-50 rounded-lg transition-all">Sign
-                    In</a>
-                <a href="/?nav=login"
-                    class="bg-gray-900 text-white text-xs font-bold py-2.5 px-6 rounded-lg transition-all hover:bg-black inline-flex items-center justify-center">Get
-                    Started</a>
+                <a href="/?nav=login" class="btn-pill">Sign In</a>
+                <a href="/?nav=login" class="btn-pill btn-pill-primary">Get Started</a>
                 {% endif %}
             </div>
         </div>
